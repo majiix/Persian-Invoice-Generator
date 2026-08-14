@@ -1,0 +1,105 @@
+:root {
+  /* Font Family */
+  --font-persian: 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  /* Typography Scale */
+  --text-xs: 0.75rem;    /* 12px */
+  --text-sm: 0.875rem;   /* 14px */
+  --text-base: 1rem;     /* 16px */
+  --text-lg: 1.125rem;   /* 18px */
+  --text-xl: 1.25rem;    /* 20px */
+  --text-2xl: 1.5rem;    /* 24px */
+  --text-3xl: 1.875rem;  /* 30px */
+
+  /* Spacing Scale */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+
+  /* Border Radius */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-full: 9999px;
+
+  /* Transitions */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.25s ease;
+
+  /* Light Theme Colors (Default) */
+  --bg-app: #f8fafc;
+  --bg-surface: #ffffff;
+  --bg-surface-elevated: #ffffff;
+  --bg-surface-subtle: #f1f5f9;
+  --bg-input: #ffffff;
+  --border-color: #e2e8f0;
+  --border-focus: #3b82f6;
+
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --text-inverse: #ffffff;
+
+  /* Primary Brand Colors */
+  --primary-50: #eff6ff;
+  --primary-100: #dbeafe;
+  --primary-500: #2563eb;
+  --primary-600: #1d4ed8;
+  --primary-700: #1e40af;
+
+  /* Accent Colors */
+  --success-50: #f0fdf4;
+  --success-500: #16a34a;
+  --success-600: #15803d;
+
+  --warning-50: #fffbeb;
+  --warning-500: #d97706;
+
+  --danger-50: #fef2f2;
+  --danger-500: #dc2626;
+  --danger-600: #b91c1c;
+
+  /* Elevation Shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+
+  /* A4 Invoice Paper Dimensions */
+  --invoice-width: 210mm;
+  --invoice-min-height: 297mm;
+}
+
+[data-theme='dark'] {
+  --bg-app: #0b0f19;
+  --bg-surface: #111827;
+  --bg-surface-elevated: #1e293b;
+  --bg-surface-subtle: #1e293b;
+  --bg-input: #0f172a;
+  --border-color: #334155;
+  --border-focus: #60a5fa;
+
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-muted: #64748b;
+  --text-inverse: #0f172a;
+
+  --primary-50: #1e293b;
+  --primary-100: #1e3a8a;
+  --primary-500: #3b82f6;
+  --primary-600: #2563eb;
+  --primary-700: #1d4ed8;
+
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+}

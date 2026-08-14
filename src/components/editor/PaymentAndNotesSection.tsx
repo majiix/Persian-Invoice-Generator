@@ -1,0 +1,204 @@
+import React, { useRef } from 'react';
+import { CreditCard, FileSignature, Trash2, Upload } from 'lucide-react';
+import { Invoice, PaymentInfo } from '../../types/invoice';
+
+interface Props {
+  invoice: Invoice;
+  onChangePayment: (payment: Partial<PaymentInfo>) => void;
+  onChangeSignature: (signatureImage?: string) => void;
+  onShowToast: (msg: string, type?: 'success' | 'error' | 'info') => void;
+}
+
+const PRESET_TERMS = [
+  'مهلت پرداخت حداکثر ۱۴ روز پس از تاریخ صدور فاکتور می‌باشد.',
+  'تسویه حساب به صورت نقدی در زمان تحویل کالا / ارائه خدمت.',
+  'واریز ۵۰٪ مبلغ به عنوان پیش‌پرداخت و مابقی پس از تأیید نهایی.',
+  'در صورت تأخیر در پرداخت، خسارت دیرکرد روزانه لحاظ خواهد شد.',
+];
+
+export const PaymentAndNotesSection: React.FC<Props> = ({
+  invoice,
+  onChangePayment,
+  onChangeSignature,
+  onShowToast,
+}) => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleSignatureUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      onShowToast('حجم تصویر امضا نباید بیشتر از ۲ مگابایت باشد.', 'error');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      onChangeSignature(reader.result as string);
+      onShowToast('تصویر مهر و امضا با موفقیت بارگذاری شد.', 'success');
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveSignature = () => {
+    onChangeSignature(undefined);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  return (
+    <div className="form-section-body">
+      {/* Bank Account Info */}
+      <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <CreditCard size={16} />
+        <span>اطلاعات حساب و واریز وجه</span>
+      </div>
+
+      <div className="form-grid-2">
+        <div className="form-group">
+          <label className="form-label">نام بانک</label>
+          <input
+            type="text"
+            className="form-input"
+            value={invoice.payment.bankName || ''}
+            onChange={(e) => onChangePayment({ bankName: e.target.value })}
+            placeholder="مثال: بانک ملت / پاسارگاد"
+          />
+        </div>
+
+        <div className="form-group">
+          <label className="form-label">نام صاحب حساب</label>
+          <input
+            type="text"
+            className="form-input"
+            value={invoice.payment.accountHolder || ''}
+            onChange={(e) => onChangePayment({ accountHolder: e.target.value })}
+            placeholder="مثال: شرکت داده‌ورزان پیشرو"
+          />
+        </div>
+      </div>
+
+      <div className="form-grid-3">
+        <div className="form-group">
+          <label className="form-label">شماره حساب</label>
+          <input
+            type="text"
+            className="form-input"
+            value={invoice.payment.accountNumber || ''}
+            onChange={(e) => onChangePayment({ accountNumber: e.target.value })}
+            placeholder="290-8000-1234567-1"
+            style={{ direction: 'ltr', textAlign: 'right' }}
+          />
+        </div>
+
+        <div className="form-group">
+          <label className="form-label">شماره کارت (۱۶ رقمی)</label>
+          <input
+            type="text"
+            className="form-input"
+            value={invoice.payment.cardNumber || ''}
+            onChange={(e) => onChangePayment({ cardNumber: e.target.value })}
+            placeholder="6037-9918-1234-5678"
+            style={{ direction: 'ltr', textAlign: 'right' }}
+          />
+        </div>
+
+        <div className="form-group">
+          <label className="form-label">شماره شبا (IBAN)</label>
+          <input
+            type="text"
+            className="form-input"
+            value={invoice.payment.iban || ''}
+            onChange={(e) => onChangePayment({ iban: e.target.value })}
+            placeholder="IR000000000000000000000000"
+            style={{ direction: 'ltr', textAlign: 'right' }}
+          />
+        </div>
+      </div>
+
+      {/* Terms & Notes */}
+      <div className="form-group">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <label className="form-label">شرایط و قوانین پرداخت (توضیحات فاکتور)</label>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>انتخاب متن آماده:</div>
+        </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '6px' }}>
+          {PRESET_TERMS.map((preset, idx) => (
+            <button
+              key={idx}
+              type="button"
+              className="btn btn-sm btn-secondary"
+              onClick={() => {
+                const current = invoice.payment.terms || '';
+                onChangePayment({ terms: current ? `${current}\n${preset}` : preset });
+              }}
+              style={{ fontSize: '11px', padding: '2px 6px' }}
+            >
+              + {preset.substring(0, 30)}...
+            </button>
+          ))}
+        </div>
+        <textarea
+          className="form-textarea"
+          value={invoice.payment.terms || ''}
+          onChange={(e) => onChangePayment({ terms: e.target.value })}
+          placeholder="شرایط ضمانت، مهلت پرداخت، نحوه ارسال و..."
+          rows={3}
+        />
+      </div>
+
+      {/* Signature & Stamp Upload */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginTop: '8px', padding: '12px', background: 'var(--bg-surface-subtle)', borderRadius: 'var(--radius-md)' }}>
+        {invoice.signatureImage ? (
+          <img
+            src={invoice.signatureImage}
+            alt="امضا"
+            style={{ width: '80px', height: '50px', objectFit: 'contain', background: '#fff', border: '1px solid var(--border-color)', borderRadius: '4px' }}
+          />
+        ) : (
+          <div style={{ width: '80px', height: '50px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px dashed var(--border-color)', borderRadius: '4px', color: 'var(--text-muted)' }}>
+            <FileSignature size={20} />
+          </div>
+        )}
+
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>
+            تصویر مهر یا امضای مجاز (اختیاری)
+          </div>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '6px' }}>
+            تصویر با پس‌زمینه شفاف (PNG بدون بک‌گراند) در پایین فاکتور نمایش داده خواهد شد.
+          </div>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept="image/*"
+              style={{ display: 'none' }}
+              onChange={handleSignatureUpload}
+            />
+            <button
+              type="button"
+              className="btn btn-sm btn-secondary"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <Upload size={14} />
+              <span>{invoice.signatureImage ? 'تغییر تصویر امضا' : 'انتخاب تصویر امضا'}</span>
+            </button>
+            {invoice.signatureImage && (
+              <button
+                type="button"
+                className="btn btn-sm btn-danger"
+                onClick={handleRemoveSignature}
+              >
+                <Trash2 size={14} />
+                <span>حذف امضا</span>
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
