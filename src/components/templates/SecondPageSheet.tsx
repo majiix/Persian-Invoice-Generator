@@ -32,8 +32,8 @@ function paginateAttachmentContent(
 
   for (const p of rawParagraphs) {
     const trimmed = p.trim();
-    // Only break if a single paragraph alone is huge (over 800 chars)
-    if (trimmed.length > 800) {
+    // Only break if a single paragraph alone is huge (over 900 chars)
+    if (trimmed.length > 900) {
       const sentences = trimmed.split(/(?<=[.؟!؛])\s+/);
       for (const s of sentences) {
         if (s.trim()) atoms.push(s.trim());
@@ -44,17 +44,17 @@ function paginateAttachmentContent(
   }
 
   // Calculate lines for each atom
-  // An A4 page line with 13px font holds ~85 Persian characters
+  // An A4 page line with 12.5px font holds ~90 Persian characters
   const getAtomWeight = (text: string): number => {
-    const lines = Math.max(1, Math.ceil(text.length / 85));
-    return lines + 0.3; // +0.3 line equivalent for margin gap
+    const lines = Math.max(1, Math.ceil(text.length / 90));
+    return lines + 0.18; // +0.18 line equivalent for 5px paragraph gap
   };
 
-  // Realistic page capacities in text lines (A4 has ~1050px printable space)
-  const FIRST_PAGE_CAPACITY_NO_SIG = 34;
-  const FIRST_PAGE_CAPACITY_WITH_SIG = 27;
-  const MIDDLE_PAGE_CAPACITY = 38;
-  const LAST_PAGE_CAPACITY_WITH_SIG = 30;
+  // Realistic page capacities in text lines (A4 has ~950px usable vertical space)
+  const FIRST_PAGE_SINGLE_CAPACITY = hasSignatures ? 34 : 40;
+  const FIRST_PAGE_MULTI_CAPACITY = 40;
+  const MIDDLE_PAGE_CAPACITY = 46;
+  const LAST_PAGE_CAPACITY_WITH_SIG = 38;
 
   // Let's pack into pages
   const pagesParagraphs: string[][] = [];
@@ -65,11 +65,11 @@ function paginateAttachmentContent(
     const atom = atoms[i];
     const weight = getAtomWeight(atom);
     
-    // First page capacity depends on whether it will be the only page and has signatures
+    // First page capacity depends on whether it's the first page
     const isFirstPage = pagesParagraphs.length === 0;
     const maxCap = isFirstPage
-      ? (hasSignatures ? FIRST_PAGE_CAPACITY_WITH_SIG : FIRST_PAGE_CAPACITY_NO_SIG)
-      : (hasSignatures ? LAST_PAGE_CAPACITY_WITH_SIG : MIDDLE_PAGE_CAPACITY);
+      ? (atoms.length <= 6 ? FIRST_PAGE_SINGLE_CAPACITY : FIRST_PAGE_MULTI_CAPACITY)
+      : MIDDLE_PAGE_CAPACITY;
 
     if (currentWeight + weight > maxCap && currentPage.length > 0) {
       // Push current page and start next
@@ -86,7 +86,7 @@ function paginateAttachmentContent(
     pagesParagraphs.push(currentPage);
   }
 
-  // If last page with signatures exceeds capacity, balance it cleanly
+  // If there are multiple pages and the last page has signatures, check if the last page overflows its signature allowance
   if (pagesParagraphs.length > 1 && hasSignatures) {
     const lastIdx = pagesParagraphs.length - 1;
     const lastPageWeight = pagesParagraphs[lastIdx].reduce((sum, a) => sum + getAtomWeight(a), 0);
