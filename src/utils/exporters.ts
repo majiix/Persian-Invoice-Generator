@@ -23,6 +23,30 @@ import { formatAmount } from './persianDigits';
 import { amountToWordsWithCurrency } from './numberToWords';
 
 /**
+ * Helper to sanitize Persian text in cloned DOM before html2canvas rendering.
+ * html2canvas has a known bug where Zero-Width Non-Joiner (ZWNJ / \u200C)
+ * causes adjacent characters to overlap and render corrupted text.
+ */
+function fixClonedPersianText(root: any): void {
+  try {
+    const doc = root.ownerDocument || (root.createTreeWalker ? root : document);
+    const walker = doc.createTreeWalker(
+      root.body || root,
+      NodeFilter.SHOW_TEXT,
+      null
+    );
+    let node: Node | null;
+    while ((node = walker.nextNode())) {
+      if (node.nodeValue && /[\u200C\u200D]/.test(node.nodeValue)) {
+        node.nodeValue = node.nodeValue.replace(/[\u200C\u200D]/g, ' ');
+      }
+    }
+  } catch (err) {
+    console.warn('Error sanitizing cloned Persian text:', err);
+  }
+}
+
+/**
  * Exports the rendered invoice HTML node to a high-resolution A4 PDF.
  */
 export async function exportToPDF(element: HTMLElement, fileName: string): Promise<boolean> {
@@ -52,6 +76,9 @@ export async function exportToPDF(element: HTMLElement, fileName: string): Promi
           allowTaint: true,
           backgroundColor: '#ffffff',
           logging: false,
+          onclone: (clonedDoc) => {
+            fixClonedPersianText(clonedDoc);
+          },
         });
 
         const imgData = canvas.toDataURL('image/jpeg', 0.98);
@@ -64,6 +91,9 @@ export async function exportToPDF(element: HTMLElement, fileName: string): Promi
         allowTaint: true,
         backgroundColor: '#ffffff',
         logging: false,
+        onclone: (clonedDoc) => {
+          fixClonedPersianText(clonedDoc);
+        },
       });
 
       const imgData = canvas.toDataURL('image/jpeg', 0.98);
@@ -94,6 +124,7 @@ export async function exportToImage(element: HTMLElement, fileName: string): Pro
       backgroundColor: '#ffffff',
       logging: false,
       onclone: (clonedDoc) => {
+        fixClonedPersianText(clonedDoc);
         const clonedEl = clonedDoc.getElementById('invoice-preview-sheet');
         if (clonedEl) {
           clonedEl.style.boxShadow = 'none';
