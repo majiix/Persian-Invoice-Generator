@@ -102,7 +102,6 @@ export async function exportToImage(element: HTMLElement, fileName: string): Pro
         if (clonedEl) {
           clonedEl.style.boxShadow = 'none';
           clonedEl.style.margin = '0';
-          clonedEl.style.transform = 'none';
           clonedEl.style.borderRadius = '0';
         }
       },
@@ -129,6 +128,7 @@ export async function exportToWord(invoice: Invoice, fileName: string): Promise<
     const isPersianDigits = invoice.digitType === 'persian';
     const currencyName = CURRENCY_LABELS[invoice.currency] || invoice.currency;
     const totals = calculateInvoiceTotals(invoice);
+    const bankAccounts = invoice.payment.bankAccounts || [];
 
     const doc = new Document({
       sections: [
@@ -412,24 +412,27 @@ export async function exportToWord(invoice: Invoice, fileName: string): Promise<
               ],
             }),
 
-            // Payment & Terms
-            ...(invoice.payment.bankName || invoice.payment.cardNumber || invoice.payment.iban
+            // Payment & Multiple Bank Accounts
+            ...(bankAccounts.length > 0
               ? [
                   new Paragraph({
-                    children: [new TextRun({ text: 'اطلاعات پرداخت و شماره حساب:', bold: true })],
+                    children: [new TextRun({ text: 'اطلاعات حساب‌های بانکی و واریز وجه:', bold: true })],
                     alignment: AlignmentType.RIGHT,
                     bidirectional: true,
                     spacing: { before: 200, after: 100 },
                   }),
-                  new Paragraph({
-                    bidirectional: true,
-                    alignment: AlignmentType.RIGHT,
-                    children: [
-                      new TextRun({
-                        text: `${invoice.payment.bankName ? 'بانک: ' + invoice.payment.bankName + ' | ' : ''}${invoice.payment.accountHolder ? 'به نام: ' + invoice.payment.accountHolder + ' | ' : ''}${invoice.payment.cardNumber ? 'شماره کارت: ' + invoice.payment.cardNumber + ' | ' : ''}${invoice.payment.iban ? 'شماره شبا: ' + invoice.payment.iban : ''}`,
-                      }),
-                    ],
-                  }),
+                  ...bankAccounts.map(
+                    (acc) =>
+                      new Paragraph({
+                        bidirectional: true,
+                        alignment: AlignmentType.RIGHT,
+                        children: [
+                          new TextRun({
+                            text: `${acc.bankName ? 'بانک ' + acc.bankName + ' | ' : ''}${acc.accountHolder ? 'به نام: ' + acc.accountHolder + ' | ' : ''}${acc.cardNumber ? 'شماره کارت: ' + acc.cardNumber + ' | ' : ''}${acc.accountNumber ? 'شماره حساب: ' + acc.accountNumber + ' | ' : ''}${acc.iban ? 'شماره شبا: ' + acc.iban : ''}`,
+                          }),
+                        ],
+                      })
+                  ),
                 ]
               : []),
 
@@ -490,10 +493,27 @@ export function validateAndParseInvoiceJSON(jsonText: string): { success: boolea
       return { success: false, error: 'اطلاعات فروشنده یا خریدار در فایل موجود نیست.' };
     }
 
-    // Assign fallback IDs if missing
     if (!data.id) {
       data.id = 'inv-' + Date.now().toString(36);
     }
+
+    // Normalize bank accounts array
+    let accounts = [];
+    if (Array.isArray(data.payment?.bankAccounts)) {
+      accounts = data.payment.bankAccounts;
+    } else if (data.payment?.bankName || data.payment?.cardNumber || data.payment?.iban) {
+      accounts = [
+        {
+          id: 'acc-1',
+          bankName: data.payment.bankName || '',
+          accountHolder: data.payment.accountHolder || '',
+          accountNumber: data.payment.accountNumber || '',
+          cardNumber: data.payment.cardNumber || '',
+          iban: data.payment.iban || '',
+        },
+      ];
+    }
+    data.payment = { ...data.payment, bankAccounts: accounts };
 
     data.items = data.items.map((item: any, index: number) => ({
       id: item.id || `item-${index}-${Date.now()}`,

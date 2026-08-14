@@ -4,6 +4,8 @@ import {
   ChevronDown,
   ChevronUp,
   CreditCard,
+  ChevronsDownUp,
+  ChevronsUpDown,
   FileSpreadsheet,
   FileText,
   LayoutTemplate,
@@ -33,17 +35,32 @@ export const InvoiceEditor: React.FC<Props> = ({
   onShowToast,
   className = '',
 }) => {
+  // All sections collapsed on initial page load
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
-    meta: true,
-    business: true,
-    client: true,
-    items: true,
+    meta: false,
+    business: false,
+    client: false,
+    items: false,
     payment: false,
-    templates: true,
+    templates: false,
   });
+
+  const allCollapsed = Object.values(openSections).every((v) => !v);
 
   const toggleSection = (key: string) => {
     setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const handleToggleAll = () => {
+    const nextState = allCollapsed;
+    setOpenSections({
+      meta: nextState,
+      business: nextState,
+      client: nextState,
+      items: nextState,
+      payment: nextState,
+      templates: nextState,
+    });
   };
 
   const handleUpdateBusiness = (updates: Partial<BusinessInfo>) => {
@@ -72,6 +89,31 @@ export const InvoiceEditor: React.FC<Props> = ({
 
   return (
     <div className={`invoice-editor-pane ${className}`}>
+      {/* Top Editor Controls */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '-4px' }}>
+        <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-secondary)' }}>
+          بخش‌های فرم صدور فاکتور
+        </div>
+        <button
+          type="button"
+          className="btn btn-sm btn-secondary"
+          onClick={handleToggleAll}
+          style={{ fontSize: '11px', padding: '3px 8px' }}
+        >
+          {allCollapsed ? (
+            <>
+              <ChevronsUpDown size={14} />
+              <span>باز کردن همه بخش‌ها</span>
+            </>
+          ) : (
+            <>
+              <ChevronsDownUp size={14} />
+              <span>بستن همه بخش‌ها</span>
+            </>
+          )}
+        </button>
+      </div>
+
       {/* Section 1: Meta & Dates */}
       <div className={`form-section ${openSections.meta ? 'open' : ''}`}>
         <div className="form-section-header" onClick={() => toggleSection('meta')}>
@@ -82,7 +124,7 @@ export const InvoiceEditor: React.FC<Props> = ({
             <div>
               <h3 style={{ fontSize: '14px', fontWeight: 700 }}>اطلاعات و تنظیمات کلی فاکتور</h3>
               <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                شماره، تاریخ‌ها، واحد پول و نوع تقویم
+                شماره: {invoice.invoiceNumber} | تاریخ: {invoice.issueDate}
               </p>
             </div>
           </div>
@@ -172,7 +214,7 @@ export const InvoiceEditor: React.FC<Props> = ({
             <div>
               <h3 style={{ fontSize: '14px', fontWeight: 700 }}>اطلاعات حساب و شرایط پرداخت</h3>
               <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                شماره شبا، کارت بانکی، شرایط تسویه و امضا
+                {invoice.payment.bankAccounts?.length || 0} حساب بانکی ثبت شده | شرایط تسویه و امضا
               </p>
             </div>
           </div>
@@ -198,7 +240,7 @@ export const InvoiceEditor: React.FC<Props> = ({
             <div>
               <h3 style={{ fontSize: '14px', fontWeight: 700 }}>قالب ظاهری فاکتور</h3>
               <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                انتخاب استایل و طراحی برگه
+                قالب فعلی: {invoice.templateId === 'classic' ? 'رسمی و مالیاتی' : invoice.templateId === 'minimal' ? 'مینیمال' : 'مدرن و سازمانی'}
               </p>
             </div>
           </div>

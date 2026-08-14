@@ -12,6 +12,7 @@ export const MinimalTemplate: React.FC<TemplateProps> = ({ invoice }) => {
   const isPersianDigits = invoice.digitType === 'persian';
   const currencyName = CURRENCY_LABELS[invoice.currency] || invoice.currency;
   const totals = calculateInvoiceTotals(invoice);
+  const bankAccounts = invoice.payment.bankAccounts || [];
 
   return (
     <div className="invoice-sheet-container template-minimal">
@@ -124,14 +125,18 @@ export const MinimalTemplate: React.FC<TemplateProps> = ({ invoice }) => {
             </div>
           )}
 
-          {(invoice.payment.bankName || invoice.payment.cardNumber || invoice.payment.iban) && (
+          {/* Multiple Bank Accounts */}
+          {bankAccounts.length > 0 && (
             <div style={{ marginBottom: '8px' }}>
-              <strong>شماره حساب و واریز: </strong>
-              <span>
-                {invoice.payment.bankName ? `بانک ${invoice.payment.bankName} ` : ''}
-                {invoice.payment.cardNumber ? `کارت: ${invoice.payment.cardNumber} ` : ''}
-                {invoice.payment.iban ? `شبا: ${invoice.payment.iban}` : ''}
-              </span>
+              <strong>شماره‌های حساب و واریز: </strong>
+              {bankAccounts.map((acc, idx) => (
+                <div key={acc.id || idx} style={{ marginTop: '2px', fontSize: '11.5px' }}>
+                  {acc.bankName && <span>بانک {acc.bankName} </span>}
+                  {acc.cardNumber && <span>| کارت: {acc.cardNumber} </span>}
+                  {acc.accountNumber && <span>| حساب: {acc.accountNumber} </span>}
+                  {acc.iban && <span>| شبا: {acc.iban}</span>}
+                </div>
+              ))}
             </div>
           )}
 

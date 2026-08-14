@@ -13,6 +13,7 @@ export const ModernTemplate: React.FC<TemplateProps> = ({ invoice }) => {
   const currencyName = CURRENCY_LABELS[invoice.currency] || invoice.currency;
   const totals = calculateInvoiceTotals(invoice);
   const statusInfo = STATUS_LABELS[invoice.status] || STATUS_LABELS.unpaid;
+  const bankAccounts = invoice.payment.bankAccounts || [];
 
   return (
     <div className="invoice-sheet-container template-modern">
@@ -147,14 +148,19 @@ export const ModernTemplate: React.FC<TemplateProps> = ({ invoice }) => {
             {invoice.payment.terms || 'تسویه حساب مطابق توافق طرفین انجام خواهد شد.'}
           </p>
 
-          {(invoice.payment.bankName || invoice.payment.cardNumber || invoice.payment.iban) && (
+          {/* Multiple Bank Accounts */}
+          {bankAccounts.length > 0 && (
             <div style={{ marginTop: '8px', paddingTop: '6px', borderTop: '1px solid #e2e8f0' }}>
-              <strong>اطلاعات حساب بانکی: </strong>
-              <span style={{ fontFamily: 'var(--font-mono)' }}>
-                {invoice.payment.bankName ? `بانک ${invoice.payment.bankName} - ` : ''}
-                {invoice.payment.cardNumber ? `کارت: ${invoice.payment.cardNumber} ` : ''}
-                {invoice.payment.iban ? `شبا: ${invoice.payment.iban}` : ''}
-              </span>
+              <strong style={{ display: 'block', marginBottom: '4px' }}>اطلاعات حساب‌های بانکی:</strong>
+              {bankAccounts.map((acc, idx) => (
+                <div key={acc.id || idx} style={{ marginBottom: '4px', fontSize: '11px', color: '#334155' }}>
+                  <span style={{ fontWeight: 700 }}>{acc.bankName ? `بانک ${acc.bankName}: ` : `حساب ${idx + 1}: `}</span>
+                  {acc.accountHolder && <span>به نام {acc.accountHolder} | </span>}
+                  {acc.cardNumber && <span style={{ fontFamily: 'var(--font-mono)' }}>کارت: {acc.cardNumber} </span>}
+                  {acc.accountNumber && <span style={{ fontFamily: 'var(--font-mono)' }}>| حساب: {acc.accountNumber} </span>}
+                  {acc.iban && <span style={{ fontFamily: 'var(--font-mono)' }}>| شبا: {acc.iban}</span>}
+                </div>
+              ))}
             </div>
           )}
 

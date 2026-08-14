@@ -30,6 +30,9 @@ export const App: React.FC = () => {
     return list.length > 0 ? list[0] : createNewInvoice();
   });
 
+  // Track whether the latest version of the JSON has been downloaded
+  const [lastDownloadedJSON, setLastDownloadedJSON] = useState<string | null>(null);
+
   // Mobile navigation tab ('editor' | 'preview')
   const [mobileTab, setMobileTab] = useState<'editor' | 'preview'>('editor');
 
@@ -45,6 +48,23 @@ export const App: React.FC = () => {
     document.documentElement.setAttribute('data-theme', theme);
     saveTheme(theme);
   }, [theme]);
+
+  // Warn user before closing/reloading page if the latest JSON has not been downloaded
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      const currentJSON = JSON.stringify(invoice);
+      if (lastDownloadedJSON !== currentJSON) {
+        e.preventDefault();
+        e.returnValue = ''; // Standard browser prompt to confirm leaving
+        return '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [invoice, lastDownloadedJSON]);
 
   const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
     const id = Date.now().toString(36) + Math.random().toString(36).substring(2, 5);
@@ -116,10 +136,15 @@ export const App: React.FC = () => {
     setInvoice(imported);
     saveInvoiceToStorage(imported);
     setSavedInvoices(getSavedInvoices());
+    setLastDownloadedJSON(JSON.stringify(imported));
   };
 
   const handleUpdateInvoice = (updates: Partial<Invoice>) => {
     setInvoice((prev) => ({ ...prev, ...updates }));
+  };
+
+  const handleAfterExportJSON = () => {
+    setLastDownloadedJSON(JSON.stringify(invoice));
   };
 
   return (
@@ -170,6 +195,7 @@ export const App: React.FC = () => {
         <PreviewPane
           invoice={invoice}
           onShowToast={showToast}
+          onAfterExportJSON={handleAfterExportJSON}
           className={mobileTab !== 'preview' ? 'hidden-on-mobile' : ''}
         />
       </main>

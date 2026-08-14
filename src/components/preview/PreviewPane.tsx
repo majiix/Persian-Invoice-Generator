@@ -16,10 +16,16 @@ import { exportToImage, exportToJSON, exportToPDF, exportToWord } from '../../ut
 interface Props {
   invoice: Invoice;
   onShowToast: (msg: string, type?: 'success' | 'error' | 'info') => void;
+  onAfterExportJSON?: () => void;
   className?: string;
 }
 
-export const PreviewPane: React.FC<Props> = ({ invoice, onShowToast, className = '' }) => {
+export const PreviewPane: React.FC<Props> = ({
+  invoice,
+  onShowToast,
+  onAfterExportJSON,
+  className = '',
+}) => {
   const previewRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState<number>(1);
   const [isExportingPDF, setIsExportingPDF] = useState(false);
@@ -77,6 +83,9 @@ export const PreviewPane: React.FC<Props> = ({ invoice, onShowToast, className =
     try {
       exportToJSON(invoice, getSafeFileName());
       onShowToast('اطلاعات فاکتور در قالب فایل JSON ذخیره گردید.', 'success');
+      if (onAfterExportJSON) {
+        onAfterExportJSON();
+      }
     } catch (err) {
       console.error(err);
       onShowToast('خطا در خروجی JSON.', 'error');

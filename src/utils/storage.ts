@@ -1,9 +1,36 @@
-import { BusinessInfo, Invoice, LineItem } from '../types/invoice';
+import { BusinessInfo, Invoice, LineItem, BankAccount } from '../types/invoice';
 import { addDaysToJalali, getTodayJalali } from './jalaliDate';
 
 const STORAGE_KEY_INVOICES = 'faktor_invoices_v1';
 const STORAGE_KEY_BUSINESS_PROFILE = 'faktor_business_profile_v1';
 const STORAGE_KEY_THEME = 'faktor_theme_v1';
+
+export function normalizeInvoice(inv: any): Invoice {
+  // Ensure bankAccounts array exists
+  let accounts: BankAccount[] = [];
+  if (Array.isArray(inv.payment?.bankAccounts) && inv.payment.bankAccounts.length > 0) {
+    accounts = inv.payment.bankAccounts;
+  } else if (inv.payment?.bankName || inv.payment?.cardNumber || inv.payment?.iban || inv.payment?.accountNumber) {
+    accounts = [
+      {
+        id: 'acc-1',
+        bankName: inv.payment.bankName || '',
+        accountHolder: inv.payment.accountHolder || '',
+        accountNumber: inv.payment.accountNumber || '',
+        cardNumber: inv.payment.cardNumber || '',
+        iban: inv.payment.iban || '',
+      },
+    ];
+  }
+
+  return {
+    ...inv,
+    payment: {
+      ...inv.payment,
+      bankAccounts: accounts,
+    },
+  };
+}
 
 export function createNewInvoice(): Invoice {
   const today = getTodayJalali();
@@ -91,11 +118,24 @@ export function createNewInvoice(): Invoice {
     },
     items: sampleItems,
     payment: {
-      bankName: 'بانک پاسارگاد',
-      accountHolder: 'شرکت فناوری و توسعه نمونه',
-      accountNumber: '290-8000-1234567-1',
-      cardNumber: '5022-2910-1234-5678',
-      iban: 'IR000570029080001234567001',
+      bankAccounts: [
+        {
+          id: 'acc-1',
+          bankName: 'بانک پاسارگاد',
+          accountHolder: 'شرکت فناوری و توسعه نمونه',
+          accountNumber: '290-8000-1234567-1',
+          cardNumber: '5022-2910-1234-5678',
+          iban: 'IR000570029080001234567001',
+        },
+        {
+          id: 'acc-2',
+          bankName: 'بانک ملت',
+          accountHolder: 'شرکت فناوری و توسعه نمونه',
+          accountNumber: '4820-123456',
+          cardNumber: '6104-3378-9876-5432',
+          iban: 'IR880120000000004820123456',
+        },
+      ],
       notes: 'لطفاً پس از واریز، شماره پیگیری را به واحد مالی اطلاع دهید.',
       terms: 'مهلت پرداخت حداکثر ۱۴ روز پس از تاریخ صدور فاکتور می‌باشد. خدمات پس از تسویه کامل ارائه خواهد شد.',
     },
@@ -109,7 +149,8 @@ export function getSavedInvoices(): Invoice[] {
     const raw = localStorage.getItem(STORAGE_KEY_INVOICES);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    if (!Array.isArray(parsed)) return [];
+    return parsed.map(normalizeInvoice);
   } catch {
     return [];
   }
@@ -118,7 +159,7 @@ export function getSavedInvoices(): Invoice[] {
 export function saveInvoiceToStorage(invoice: Invoice): Invoice[] {
   const list = getSavedInvoices();
   const existingIndex = list.findIndex((item) => item.id === invoice.id);
-  const updatedInvoice = { ...invoice, updatedAt: new Date().toISOString() };
+  const updatedInvoice = { ...normalizeInvoice(invoice), updatedAt: new Date().toISOString() };
 
   let updatedList: Invoice[];
   if (existingIndex >= 0) {

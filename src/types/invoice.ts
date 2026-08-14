@@ -45,12 +45,23 @@ export interface LineItem {
   taxRate: number; // percentage, e.g. 10% VAT
 }
 
-export interface PaymentInfo {
-  bankName?: string;
+export interface BankAccount {
+  id: string;
+  bankName: string;
   accountHolder?: string;
   accountNumber?: string;
   cardNumber?: string;
   iban?: string; // شماره شبا
+}
+
+export interface PaymentInfo {
+  bankAccounts: BankAccount[];
+  // Legacy optional single fields for backward compatibility
+  bankName?: string;
+  accountHolder?: string;
+  accountNumber?: string;
+  cardNumber?: string;
+  iban?: string;
   notes?: string;
   terms?: string;
 }

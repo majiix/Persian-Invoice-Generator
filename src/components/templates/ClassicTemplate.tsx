@@ -12,6 +12,7 @@ export const ClassicTemplate: React.FC<TemplateProps> = ({ invoice }) => {
   const isPersianDigits = invoice.digitType === 'persian';
   const currencyName = CURRENCY_LABELS[invoice.currency] || invoice.currency;
   const totals = calculateInvoiceTotals(invoice);
+  const bankAccounts = invoice.payment.bankAccounts || [];
 
   return (
     <div className="invoice-sheet-container template-classic">
@@ -169,13 +170,19 @@ export const ClassicTemplate: React.FC<TemplateProps> = ({ invoice }) => {
             {amountToWordsWithCurrency(totals.grandTotal, currencyName)}
           </div>
 
-          {(invoice.payment.bankName || invoice.payment.cardNumber || invoice.payment.iban) && (
+          {/* Multiple Bank Accounts */}
+          {bankAccounts.length > 0 && (
             <div style={{ marginTop: '8px', paddingTop: '6px', borderTop: '1px solid #e5e7eb', fontSize: '11px' }}>
-              <strong>اطلاعات حساب: </strong>
-              {invoice.payment.bankName && `بانک ${invoice.payment.bankName} `}
-              {invoice.payment.accountHolder && `به نام ${invoice.payment.accountHolder} `}
-              {invoice.payment.cardNumber && `| کارت: ${invoice.payment.cardNumber} `}
-              {invoice.payment.iban && `| شبا: ${invoice.payment.iban}`}
+              <strong>اطلاعات حساب‌های بانکی: </strong>
+              {bankAccounts.map((acc, idx) => (
+                <div key={acc.id || idx} style={{ marginTop: '3px' }}>
+                  {acc.bankName && <span style={{ fontWeight: 600 }}>{acc.bankName}: </span>}
+                  {acc.accountHolder && `به نام ${acc.accountHolder} `}
+                  {acc.cardNumber && `| کارت: ${acc.cardNumber} `}
+                  {acc.accountNumber && `| حساب: ${acc.accountNumber} `}
+                  {acc.iban && `| شبا: ${acc.iban}`}
+                </div>
+              ))}
             </div>
           )}
 
