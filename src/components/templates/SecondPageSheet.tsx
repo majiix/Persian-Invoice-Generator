@@ -8,29 +8,32 @@ interface Props {
 
 interface AttachmentPage {
   pageNumber: number; // 2, 3, 4...
-  totalPages: number; // e.g. 4
+  totalPages: number; // e.g. 3
   paragraphs: string[];
   isFirstAttachmentPage: boolean;
   isLastAttachmentPage: boolean;
 }
 
 /**
- * Splits attachment content into multiple A4-sized pages cleanly.
+ * Splits attachment content into multiple A4-sized pages cleanly,
+ * filling the page naturally without excessive whitespace.
  */
 function paginateAttachmentContent(
   rawContent: string,
   hasSignatures: boolean
 ): AttachmentPage[] {
-  const cleaned = rawContent && rawContent.trim().length > 0 ? rawContent : 'توضیحات و مشخصات تکمیلی برای این فاکتور ثبت نشده است.';
+  const cleaned = rawContent && rawContent.trim().length > 0
+    ? rawContent
+    : 'توضیحات و مشخصات تکمیلی برای این فاکتور ثبت نشده است.';
 
-  // 1. Break into paragraph chunks. Break huge paragraphs on sentence boundaries if needed.
+  // 1. Break by explicit line breaks
   const rawParagraphs = cleaned.split('\n').filter((p) => p.trim().length > 0);
   const atoms: string[] = [];
 
   for (const p of rawParagraphs) {
     const trimmed = p.trim();
-    if (trimmed.length > 500) {
-      // Split into smaller sentences
+    // Only break if a single paragraph alone is huge (over 800 chars)
+    if (trimmed.length > 800) {
       const sentences = trimmed.split(/(?<=[.؟!؛])\s+/);
       for (const s of sentences) {
         if (s.trim()) atoms.push(s.trim());
@@ -41,37 +44,38 @@ function paginateAttachmentContent(
   }
 
   // Calculate lines for each atom
-  // Average line in 13px font with padding holds ~72 characters
+  // An A4 page line with 13px font holds ~85 Persian characters
   const getAtomWeight = (text: string): number => {
-    const lines = Math.max(1, Math.ceil(text.length / 72));
-    return lines + 0.6; // +0.6 for paragraph spacing
+    const lines = Math.max(1, Math.ceil(text.length / 85));
+    return lines + 0.3; // +0.3 line equivalent for margin gap
   };
 
-  // Capacities in equivalent text lines
-  const FIRST_PAGE_SINGLE_CAPACITY = hasSignatures ? 20 : 26;
-  const FIRST_PAGE_MULTI_CAPACITY = 26;
-  const MIDDLE_PAGE_CAPACITY = 32;
-  const LAST_PAGE_CAPACITY = hasSignatures ? 22 : 30;
+  // Realistic page capacities in text lines (A4 has ~1050px printable space)
+  const FIRST_PAGE_CAPACITY_NO_SIG = 34;
+  const FIRST_PAGE_CAPACITY_WITH_SIG = 27;
+  const MIDDLE_PAGE_CAPACITY = 38;
+  const LAST_PAGE_CAPACITY_WITH_SIG = 30;
 
   // Let's pack into pages
   const pagesParagraphs: string[][] = [];
   let currentPage: string[] = [];
   let currentWeight = 0;
-  let isFirst = true;
 
   for (let i = 0; i < atoms.length; i++) {
     const atom = atoms[i];
     const weight = getAtomWeight(atom);
     
-    // Determine capacity for the current page
-    let maxCap = isFirst ? (atoms.length <= 4 ? FIRST_PAGE_SINGLE_CAPACITY : FIRST_PAGE_MULTI_CAPACITY) : MIDDLE_PAGE_CAPACITY;
+    // First page capacity depends on whether it will be the only page and has signatures
+    const isFirstPage = pagesParagraphs.length === 0;
+    const maxCap = isFirstPage
+      ? (hasSignatures ? FIRST_PAGE_CAPACITY_WITH_SIG : FIRST_PAGE_CAPACITY_NO_SIG)
+      : (hasSignatures ? LAST_PAGE_CAPACITY_WITH_SIG : MIDDLE_PAGE_CAPACITY);
 
     if (currentWeight + weight > maxCap && currentPage.length > 0) {
       // Push current page and start next
       pagesParagraphs.push(currentPage);
       currentPage = [atom];
       currentWeight = weight;
-      isFirst = false;
     } else {
       currentPage.push(atom);
       currentWeight += weight;
@@ -82,11 +86,11 @@ function paginateAttachmentContent(
     pagesParagraphs.push(currentPage);
   }
 
-  // If last page with signatures exceeds last page capacity, move some or split to a dedicated signature page
+  // If last page with signatures exceeds capacity, balance it cleanly
   if (pagesParagraphs.length > 1 && hasSignatures) {
     const lastIdx = pagesParagraphs.length - 1;
     const lastPageWeight = pagesParagraphs[lastIdx].reduce((sum, a) => sum + getAtomWeight(a), 0);
-    if (lastPageWeight > LAST_PAGE_CAPACITY && pagesParagraphs[lastIdx].length > 1) {
+    if (lastPageWeight > LAST_PAGE_CAPACITY_WITH_SIG && pagesParagraphs[lastIdx].length > 1) {
       const popped = pagesParagraphs[lastIdx].pop()!;
       pagesParagraphs.push([popped]);
     }
@@ -144,8 +148,8 @@ export const SecondPageSheet: React.FC<Props> = ({ invoice }) => {
                           : invoice.templateId === 'modern'
                           ? '3px solid #2563eb'
                           : '1px solid #e5e7eb',
-                      paddingBottom: '14px',
-                      marginBottom: '16px',
+                      paddingBottom: '12px',
+                      marginBottom: '14px',
                     }}
                   >
                     <div>
@@ -173,7 +177,7 @@ export const SecondPageSheet: React.FC<Props> = ({ invoice }) => {
                       borderRadius: '6px',
                       border: '1px solid #e2e8f0',
                       fontSize: '11.5px',
-                      marginBottom: '16px',
+                      marginBottom: '14px',
                     }}
                   >
                     <div>
@@ -194,8 +198,8 @@ export const SecondPageSheet: React.FC<Props> = ({ invoice }) => {
                     justifyContent: 'space-between',
                     alignItems: 'center',
                     borderBottom: '1px solid #e2e8f0',
-                    paddingBottom: '10px',
-                    marginBottom: '16px',
+                    paddingBottom: '8px',
+                    marginBottom: '14px',
                     fontSize: '11.5px',
                     color: '#64748b',
                   }}
@@ -208,22 +212,26 @@ export const SecondPageSheet: React.FC<Props> = ({ invoice }) => {
                 </div>
               )}
 
-              {/* Main Comments & Terms Content */}
+              {/* Main Comments & Terms Content (Right aligned, strictly NO justify to avoid broken Persian text) */}
               <div
                 className="second-page-content-box"
                 style={{
                   flex: 1,
                   fontSize: '12.5px',
-                  lineHeight: 1.85,
+                  lineHeight: 1.75,
                   color: '#1e293b',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: '8px',
-                  textAlign: 'justify',
+                  gap: '6px',
+                  textAlign: 'right',
+                  direction: 'rtl',
+                  letterSpacing: '0px',
+                  wordBreak: 'normal',
+                  overflowWrap: 'break-word',
                 }}
               >
                 {page.paragraphs.map((para, pIdx) => (
-                  <p key={pIdx} style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
+                  <p key={pIdx} style={{ margin: 0, whiteSpace: 'pre-wrap', textAlign: 'right', letterSpacing: '0px' }}>
                     {para}
                   </p>
                 ))}
@@ -234,12 +242,12 @@ export const SecondPageSheet: React.FC<Props> = ({ invoice }) => {
                 <div
                   style={{
                     marginTop: 'auto',
-                    paddingTop: '16px',
+                    paddingTop: '14px',
                     borderTop: '1px dashed #cbd5e1',
                     display: 'grid',
                     gridTemplateColumns:
                       invoice.showSellerSignature && invoice.showBuyerSignature ? '1fr 1fr' : '1fr',
-                    gap: '20px',
+                    gap: '16px',
                   }}
                 >
                   {invoice.showSellerSignature && (
@@ -248,8 +256,8 @@ export const SecondPageSheet: React.FC<Props> = ({ invoice }) => {
                         textAlign: 'center',
                         border: '1px dashed #d1d5db',
                         borderRadius: '4px',
-                        padding: '8px',
-                        minHeight: '75px',
+                        padding: '6px',
+                        minHeight: '70px',
                         display: 'flex',
                         flexDirection: 'column',
                         justifyContent: 'space-between',
@@ -260,7 +268,7 @@ export const SecondPageSheet: React.FC<Props> = ({ invoice }) => {
                         <img
                           src={invoice.signatureImage}
                           alt="امضا"
-                          style={{ maxHeight: '38px', objectFit: 'contain', margin: '0 auto' }}
+                          style={{ maxHeight: '36px', objectFit: 'contain', margin: '0 auto' }}
                         />
                       )}
                     </div>
@@ -272,8 +280,8 @@ export const SecondPageSheet: React.FC<Props> = ({ invoice }) => {
                         textAlign: 'center',
                         border: '1px dashed #d1d5db',
                         borderRadius: '4px',
-                        padding: '8px',
-                        minHeight: '75px',
+                        padding: '6px',
+                        minHeight: '70px',
                         display: 'flex',
                         flexDirection: 'column',
                         justifyContent: 'space-between',
