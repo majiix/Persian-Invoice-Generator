@@ -6,7 +6,6 @@ const STORAGE_KEY_BUSINESS_PROFILE = 'faktor_business_profile_v1';
 const STORAGE_KEY_THEME = 'faktor_theme_v1';
 
 export function normalizeInvoice(inv: any): Invoice {
-  // Ensure bankAccounts array exists
   let accounts: BankAccount[] = [];
   if (Array.isArray(inv.payment?.bankAccounts) && inv.payment.bankAccounts.length > 0) {
     accounts = inv.payment.bankAccounts;
@@ -25,6 +24,13 @@ export function normalizeInvoice(inv: any): Invoice {
 
   return {
     ...inv,
+    showStatusBadge: inv.showStatusBadge ?? true,
+    showSellerSignature: inv.showSellerSignature ?? true,
+    showBuyerSignature: inv.showBuyerSignature ?? true,
+    enableSecondPage: inv.enableSecondPage ?? false,
+    secondPageTitle: inv.secondPageTitle || 'پیوست / شرایط و توضیحات تکمیلی قرارداد',
+    secondPageContent: inv.secondPageContent || '',
+    secondPageSignatures: inv.secondPageSignatures ?? true,
     payment: {
       ...inv.payment,
       bankAccounts: accounts,
@@ -96,6 +102,7 @@ export function createNewInvoice(): Invoice {
     issueDate: today,
     dueDate: dueDate,
     status: 'unpaid',
+    showStatusBadge: true,
     currency: 'toman',
     digitType: 'persian',
     calendarType: 'jalali',
@@ -103,6 +110,12 @@ export function createNewInvoice(): Invoice {
     taxEnabled: true,
     discountEnabled: true,
     defaultTaxRate: 10,
+    showSellerSignature: true,
+    showBuyerSignature: true,
+    enableSecondPage: false,
+    secondPageTitle: 'پیوست / شرایط و توضیحات تکمیلی قرارداد',
+    secondPageContent: `۱. کلیه خدمات ارائه شده دارای ۳ ماه پشتیبانی فنی و رفع خطای رایگان می‌باشد.\n۲. هرگونه تغییر در نیازمندی‌های پروژه پس از شروع فرایند، مشمول هزینه و زمان‌بندی مجزا خواهد بود.\n۳. خریدار متعهد می‌گردد اطلاعات و دسترسی‌های لازم جهت تحویل سفارش را در موعد مقرر در اختیار مجری قرار دهد.\n۴. در صورت تأخیر در پرداخت صورتحساب، به ازای هر روز تأخیر ۱ درصد جریمه دیرکرد محاسبه خواهد شد.`,
+    secondPageSignatures: true,
     business: defaultBusiness,
     client: {
       name: 'شرکت تجارت الکترونیک پارس',

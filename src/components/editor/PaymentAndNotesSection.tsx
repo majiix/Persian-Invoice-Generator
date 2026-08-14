@@ -6,6 +6,7 @@ interface Props {
   invoice: Invoice;
   onChangePayment: (payment: Partial<PaymentInfo>) => void;
   onChangeSignature: (signatureImage?: string) => void;
+  onChangeSignaturesVisibility: (updates: { showSellerSignature?: boolean; showBuyerSignature?: boolean }) => void;
   onShowToast: (msg: string, type?: 'success' | 'error' | 'info') => void;
 }
 
@@ -20,6 +21,7 @@ export const PaymentAndNotesSection: React.FC<Props> = ({
   invoice,
   onChangePayment,
   onChangeSignature,
+  onChangeSignaturesVisibility,
   onShowToast,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -227,55 +229,85 @@ export const PaymentAndNotesSection: React.FC<Props> = ({
         />
       </div>
 
-      {/* Signature & Stamp Upload */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginTop: '8px', padding: '12px', background: 'var(--bg-surface-subtle)', borderRadius: 'var(--radius-md)' }}>
-        {invoice.signatureImage ? (
-          <img
-            src={invoice.signatureImage}
-            alt="امضا"
-            style={{ width: '80px', height: '50px', objectFit: 'contain', background: '#fff', border: '1px solid var(--border-color)', borderRadius: '4px' }}
-          />
-        ) : (
-          <div style={{ width: '80px', height: '50px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px dashed var(--border-color)', borderRadius: '4px', color: 'var(--text-muted)' }}>
-            <FileSignature size={20} />
+      {/* Signature Visibility Toggles */}
+      <div style={{ marginTop: '12px', padding: '14px', background: 'var(--bg-surface-subtle)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
+        <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <FileSignature size={16} />
+          <span>تنظیمات بخش امضا و مهر فاکتور</span>
+        </div>
+
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px', marginBottom: '12px' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px' }}>
+            <input
+              type="checkbox"
+              checked={invoice.showSellerSignature}
+              onChange={(e) => onChangeSignaturesVisibility({ showSellerSignature: e.target.checked })}
+            />
+            <span>نمایش کادر مهر و امضای فروشنده (صادرکننده)</span>
+          </label>
+
+          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px' }}>
+            <input
+              type="checkbox"
+              checked={invoice.showBuyerSignature}
+              onChange={(e) => onChangeSignaturesVisibility({ showBuyerSignature: e.target.checked })}
+            />
+            <span>نمایش کادر امضا و تأیید خریدار</span>
+          </label>
+        </div>
+
+        {/* Signature & Stamp Upload (Shown if seller signature is enabled) */}
+        {invoice.showSellerSignature && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', paddingTop: '10px', borderTop: '1px dashed var(--border-color)' }}>
+            {invoice.signatureImage ? (
+              <img
+                src={invoice.signatureImage}
+                alt="امضا"
+                style={{ width: '80px', height: '50px', objectFit: 'contain', background: '#fff', border: '1px solid var(--border-color)', borderRadius: '4px' }}
+              />
+            ) : (
+              <div style={{ width: '80px', height: '50px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px dashed var(--border-color)', borderRadius: '4px', color: 'var(--text-muted)' }}>
+                <FileSignature size={20} />
+              </div>
+            )}
+
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                تصویر مهر یا امضای مجاز فروشنده (اختیاری)
+              </div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '6px' }}>
+                تصویر با پس‌زمینه شفاف در پایین برگه فاکتور نمایش داده خواهد شد.
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  accept="image/*"
+                  style={{ display: 'none' }}
+                  onChange={handleSignatureUpload}
+                />
+                <button
+                  type="button"
+                  className="btn btn-sm btn-secondary"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Upload size={14} />
+                  <span>{invoice.signatureImage ? 'تغییر تصویر امضا' : 'انتخاب تصویر امضا'}</span>
+                </button>
+                {invoice.signatureImage && (
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-danger"
+                    onClick={handleRemoveSignature}
+                  >
+                    <Trash2 size={14} />
+                    <span>حذف تصویر امضا</span>
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
         )}
-
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>
-            تصویر مهر یا امضای مجاز (اختیاری)
-          </div>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '6px' }}>
-            تصویر با پس‌زمینه شفاف (PNG بدون بک‌گراند) در پایین فاکتور نمایش داده خواهد شد.
-          </div>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <input
-              type="file"
-              ref={fileInputRef}
-              accept="image/*"
-              style={{ display: 'none' }}
-              onChange={handleSignatureUpload}
-            />
-            <button
-              type="button"
-              className="btn btn-sm btn-secondary"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <Upload size={14} />
-              <span>{invoice.signatureImage ? 'تغییر تصویر امضا' : 'انتخاب تصویر امضا'}</span>
-            </button>
-            {invoice.signatureImage && (
-              <button
-                type="button"
-                className="btn btn-sm btn-danger"
-                onClick={handleRemoveSignature}
-              >
-                <Trash2 size={14} />
-                <span>حذف امضا</span>
-              </button>
-            )}
-          </div>
-        </div>
       </div>
     </div>
   );

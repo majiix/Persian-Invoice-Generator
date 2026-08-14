@@ -1,5 +1,5 @@
 import React from 'react';
-import { Copy, Plus, Trash2 } from 'lucide-react';
+import { Copy, Minus, Plus, Trash2 } from 'lucide-react';
 import { CURRENCY_LABELS, Invoice, LineItem } from '../../types/invoice';
 import { calculateLineItemTotal } from '../../utils/calculations';
 import { formatAmount, parseNumberInput } from '../../utils/persianDigits';
@@ -10,7 +10,7 @@ interface Props {
   onShowToast: (msg: string, type?: 'success' | 'error' | 'info') => void;
 }
 
-const UNIT_OPTIONS = ['عدد', 'ساعت', 'روز', 'ماه', 'پروژه', 'کیلوگرم', 'متر', 'بسته', 'جلسه', 'دوره'];
+const UNIT_OPTIONS = ['عدد', 'ساعت', 'روز', 'ماه', 'پروژه', 'کیلوگرم', 'متر', 'بسته', 'جلسه', 'دوره', 'دستگاه', 'مورد'];
 
 export const LineItemsSection: React.FC<Props> = ({ invoice, onChangeItems, onShowToast }) => {
   const isPersianDigits = invoice.digitType === 'persian';
@@ -77,6 +77,11 @@ export const LineItemsSection: React.FC<Props> = ({ invoice, onChangeItems, onSh
     }
   };
 
+  const adjustQuantity = (id: string, currentQty: number, delta: number) => {
+    const newQty = Math.max(0.01, +(currentQty + delta).toFixed(2));
+    handleUpdateItem(id, { quantity: newQty });
+  };
+
   return (
     <div className="form-section-body">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
@@ -107,15 +112,15 @@ export const LineItemsSection: React.FC<Props> = ({ invoice, onChangeItems, onSh
         <table className="line-items-table">
           <thead>
             <tr>
-              <th style={{ width: '30px' }}>#</th>
-              <th style={{ minWidth: '180px' }}>شرح کالا یا خدمات *</th>
-              <th style={{ width: '85px' }}>تعداد</th>
-              <th style={{ width: '90px' }}>واحد</th>
-              <th style={{ width: '130px' }}>قیمت واحد ({currencyLabel})</th>
-              {invoice.discountEnabled && <th style={{ width: '100px' }}>تخفیف</th>}
-              {invoice.taxEnabled && <th style={{ width: '80px' }}>مالیات (%)</th>}
-              <th style={{ width: '120px' }}>مبلغ کل</th>
-              <th style={{ width: '70px', textAlign: 'center' }}>عملیات</th>
+              <th style={{ width: '35px', textAlign: 'center' }}>#</th>
+              <th style={{ minWidth: '200px' }}>شرح کالا یا خدمات *</th>
+              <th style={{ width: '120px', minWidth: '120px', textAlign: 'center' }}>تعداد</th>
+              <th style={{ width: '110px', minWidth: '110px' }}>واحد</th>
+              <th style={{ width: '140px', minWidth: '130px' }}>قیمت واحد ({currencyLabel})</th>
+              {invoice.discountEnabled && <th style={{ width: '110px', minWidth: '105px' }}>تخفیف</th>}
+              {invoice.taxEnabled && <th style={{ width: '85px', minWidth: '80px', textAlign: 'center' }}>مالیات (%)</th>}
+              <th style={{ width: '130px', minWidth: '120px', textAlign: 'center' }}>مبلغ کل</th>
+              <th style={{ width: '75px', textAlign: 'center' }}>عملیات</th>
             </tr>
           </thead>
           <tbody>
@@ -136,8 +141,8 @@ export const LineItemsSection: React.FC<Props> = ({ invoice, onChangeItems, onSh
                         className="form-input"
                         value={item.description}
                         onChange={(e) => handleUpdateItem(item.id, { description: e.target.value })}
-                        placeholder="نام یا شرح خدمات..."
-                        style={{ padding: '6px 8px', fontSize: '13px' }}
+                        placeholder="نام کالا یا شرح خدمات..."
+                        style={{ fontSize: '13px' }}
                         required
                       />
                       <input
@@ -146,24 +151,41 @@ export const LineItemsSection: React.FC<Props> = ({ invoice, onChangeItems, onSh
                         value={item.itemCode || ''}
                         onChange={(e) => handleUpdateItem(item.id, { itemCode: e.target.value })}
                         placeholder="کد کالا (اختیاری)"
-                        style={{ padding: '3px 8px', fontSize: '11px', color: 'var(--text-muted)' }}
+                        style={{ fontSize: '11px', color: 'var(--text-muted)', minHeight: '30px', padding: '4px 8px' }}
                       />
                     </div>
                   </td>
 
-                  {/* Quantity */}
+                  {/* Quantity with Stepper */}
                   <td>
-                    <input
-                      type="number"
-                      min="0.01"
-                      step="any"
-                      className="form-input"
-                      value={item.quantity === 0 ? '' : item.quantity}
-                      onChange={(e) =>
-                        handleUpdateItem(item.id, { quantity: parseFloat(e.target.value) || 0 })
-                      }
-                      style={{ padding: '6px 8px', textAlign: 'center', direction: 'ltr' }}
-                    />
+                    <div className="qty-stepper">
+                      <button
+                        type="button"
+                        className="qty-stepper-btn"
+                        onClick={() => adjustQuantity(item.id, item.quantity || 0, -1)}
+                        title="کاهش تعداد"
+                      >
+                        <Minus size={12} />
+                      </button>
+                      <input
+                        type="number"
+                        min="0.01"
+                        step="any"
+                        className="qty-stepper-input"
+                        value={item.quantity === 0 ? '' : item.quantity}
+                        onChange={(e) =>
+                          handleUpdateItem(item.id, { quantity: parseFloat(e.target.value) || 0 })
+                        }
+                      />
+                      <button
+                        type="button"
+                        className="qty-stepper-btn"
+                        onClick={() => adjustQuantity(item.id, item.quantity || 0, 1)}
+                        title="افزایش تعداد"
+                      >
+                        <Plus size={12} />
+                      </button>
+                    </div>
                   </td>
 
                   {/* Unit */}
@@ -172,7 +194,7 @@ export const LineItemsSection: React.FC<Props> = ({ invoice, onChangeItems, onSh
                       className="form-select"
                       value={item.unit}
                       onChange={(e) => handleUpdateItem(item.id, { unit: e.target.value })}
-                      style={{ padding: '6px 4px', fontSize: '12px' }}
+                      style={{ fontSize: '13px' }}
                     >
                       {UNIT_OPTIONS.map((u) => (
                         <option key={u} value={u}>
@@ -192,14 +214,14 @@ export const LineItemsSection: React.FC<Props> = ({ invoice, onChangeItems, onSh
                         handleUpdateItem(item.id, { unitPrice: parseNumberInput(e.target.value) })
                       }
                       placeholder="0"
-                      style={{ padding: '6px 8px', textAlign: 'left', direction: 'ltr' }}
+                      style={{ textAlign: 'left', direction: 'ltr', fontWeight: 600 }}
                     />
                   </td>
 
                   {/* Discount */}
                   {invoice.discountEnabled && (
                     <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <input
                           type="text"
                           className="form-input"
@@ -208,7 +230,7 @@ export const LineItemsSection: React.FC<Props> = ({ invoice, onChangeItems, onSh
                             handleUpdateItem(item.id, { discount: parseNumberInput(e.target.value) })
                           }
                           placeholder="0"
-                          style={{ padding: '6px 4px', textAlign: 'left', direction: 'ltr', width: '60px' }}
+                          style={{ textAlign: 'left', direction: 'ltr', flex: 1 }}
                         />
                         <button
                           type="button"
@@ -219,16 +241,21 @@ export const LineItemsSection: React.FC<Props> = ({ invoice, onChangeItems, onSh
                           }
                           style={{
                             border: '1px solid var(--border-color)',
-                            background: 'var(--bg-surface-subtle)',
-                            borderRadius: '4px',
-                            padding: '4px 4px',
+                            background: item.discountType === 'percentage' ? 'var(--primary-50)' : 'var(--bg-surface-subtle)',
+                            color: item.discountType === 'percentage' ? 'var(--primary-600)' : 'var(--text-secondary)',
+                            borderRadius: 'var(--radius-sm)',
+                            height: '38px',
+                            minWidth: '32px',
                             cursor: 'pointer',
-                            fontSize: '10px',
+                            fontSize: '11px',
                             fontWeight: 700,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
                           }}
                           title={item.discountType === 'percentage' ? 'درصدی (%)' : 'مبلغ ثابت'}
                         >
-                          {item.discountType === 'percentage' ? '%' : '$'}
+                          {item.discountType === 'percentage' ? '%' : currencyLabel.substring(0, 1)}
                         </button>
                       </div>
                     </td>
@@ -247,7 +274,7 @@ export const LineItemsSection: React.FC<Props> = ({ invoice, onChangeItems, onSh
                           handleUpdateItem(item.id, { taxRate: parseFloat(e.target.value) || 0 })
                         }
                         placeholder="10"
-                        style={{ padding: '6px 4px', textAlign: 'center', direction: 'ltr' }}
+                        style={{ textAlign: 'center', direction: 'ltr' }}
                       />
                     </td>
                   )}
@@ -265,7 +292,7 @@ export const LineItemsSection: React.FC<Props> = ({ invoice, onChangeItems, onSh
                         className="btn btn-icon btn-secondary"
                         onClick={() => handleDuplicateItem(item)}
                         title="تکثیر این ردیف"
-                        style={{ padding: '4px' }}
+                        style={{ padding: '6px' }}
                       >
                         <Copy size={13} />
                       </button>
@@ -274,7 +301,7 @@ export const LineItemsSection: React.FC<Props> = ({ invoice, onChangeItems, onSh
                         className="btn btn-icon btn-danger"
                         onClick={() => handleDeleteItem(item.id)}
                         title="حذف این ردیف"
-                        style={{ padding: '4px' }}
+                        style={{ padding: '6px' }}
                       >
                         <Trash2 size={13} />
                       </button>

@@ -6,6 +6,7 @@ import {
   CreditCard,
   ChevronsDownUp,
   ChevronsUpDown,
+  FilePlus,
   FileSpreadsheet,
   FileText,
   LayoutTemplate,
@@ -17,6 +18,7 @@ import { BusinessInfoSection } from './BusinessInfoSection';
 import { ClientInfoSection } from './ClientInfoSection';
 import { LineItemsSection } from './LineItemsSection';
 import { PaymentAndNotesSection } from './PaymentAndNotesSection';
+import { SecondPageSection } from './SecondPageSection';
 import { TemplateSelector } from './TemplateSelector';
 import { InvoiceSummaryCard } from './InvoiceSummaryCard';
 
@@ -42,6 +44,7 @@ export const InvoiceEditor: React.FC<Props> = ({
     client: false,
     items: false,
     payment: false,
+    secondPage: false,
     templates: false,
   });
 
@@ -59,6 +62,7 @@ export const InvoiceEditor: React.FC<Props> = ({
       client: nextState,
       items: nextState,
       payment: nextState,
+      secondPage: nextState,
       templates: nextState,
     });
   };
@@ -225,12 +229,34 @@ export const InvoiceEditor: React.FC<Props> = ({
             invoice={invoice}
             onChangePayment={handleUpdatePayment}
             onChangeSignature={handleUpdateSignature}
+            onChangeSignaturesVisibility={(updates) => onChange(updates)}
             onShowToast={onShowToast}
           />
         )}
       </div>
 
-      {/* Section 6: Template Choice */}
+      {/* Section 6: Second Page (پیوست و توضیحات تکمیلی) */}
+      <div className={`form-section ${openSections.secondPage ? 'open' : ''}`}>
+        <div className="form-section-header" onClick={() => toggleSection('secondPage')}>
+          <div className="section-title-group">
+            <div className="section-icon">
+              <FilePlus size={18} />
+            </div>
+            <div>
+              <h3 style={{ fontSize: '14px', fontWeight: 700 }}>برگه دوم (صفحه توضیحات و پیوست)</h3>
+              <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                {invoice.enableSecondPage ? 'فعال - برگه دوم در پیش‌نمایش و خروجی‌ها ایجاد می‌شود' : 'غیرفعال'}
+              </p>
+            </div>
+          </div>
+          {openSections.secondPage ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+        </div>
+        {openSections.secondPage && (
+          <SecondPageSection invoice={invoice} onChange={onChange} />
+        )}
+      </div>
+
+      {/* Section 7: Template Choice */}
       <div className={`form-section ${openSections.templates ? 'open' : ''}`}>
         <div className="form-section-header" onClick={() => toggleSection('templates')}>
           <div className="section-title-group">

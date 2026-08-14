@@ -56,7 +56,6 @@ export interface BankAccount {
 
 export interface PaymentInfo {
   bankAccounts: BankAccount[];
-  // Legacy optional single fields for backward compatibility
   bankName?: string;
   accountHolder?: string;
   accountNumber?: string;
@@ -80,6 +79,7 @@ export interface Invoice {
   issueDate: string; // e.g. 1403/05/24 or 2024-08-14
   dueDate: string;
   status: InvoiceStatus;
+  showStatusBadge: boolean;
   currency: CurrencyType;
   digitType: DigitType;
   calendarType: CalendarType;
@@ -87,6 +87,15 @@ export interface Invoice {
   taxEnabled: boolean;
   discountEnabled: boolean;
   defaultTaxRate: number;
+  
+  showSellerSignature: boolean;
+  showBuyerSignature: boolean;
+  
+  // Second page (توضیحات و شرایط پیوست)
+  enableSecondPage: boolean;
+  secondPageTitle?: string;
+  secondPageContent?: string;
+  secondPageSignatures?: boolean;
   
   business: BusinessInfo;
   client: ClientInfo;

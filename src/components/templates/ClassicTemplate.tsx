@@ -229,21 +229,33 @@ export const ClassicTemplate: React.FC<TemplateProps> = ({ invoice }) => {
       </div>
 
       {/* Signatures */}
-      <div className="classic-signatures-row">
-        <div className="classic-sign-box">
-          <span>مهر و امضای فروشنده:</span>
-          {invoice.signatureImage && (
-            <img
-              src={invoice.signatureImage}
-              alt="امضا"
-              style={{ maxHeight: '45px', objectFit: 'contain' }}
-            />
+      {(invoice.showSellerSignature || invoice.showBuyerSignature) && (
+        <div
+          className="classic-signatures-row"
+          style={{
+            gridTemplateColumns:
+              invoice.showSellerSignature && invoice.showBuyerSignature ? '1fr 1fr' : '1fr',
+          }}
+        >
+          {invoice.showSellerSignature && (
+            <div className="classic-sign-box">
+              <span>مهر و امضای فروشنده:</span>
+              {invoice.signatureImage && (
+                <img
+                  src={invoice.signatureImage}
+                  alt="امضا"
+                  style={{ maxHeight: '45px', objectFit: 'contain' }}
+                />
+              )}
+            </div>
+          )}
+          {invoice.showBuyerSignature && (
+            <div className="classic-sign-box">
+              <span>مهر و امضای خریدار:</span>
+            </div>
           )}
         </div>
-        <div className="classic-sign-box">
-          <span>مهر و امضای خریدار:</span>
-        </div>
-      </div>
+      )}
     </div>
   );
 };

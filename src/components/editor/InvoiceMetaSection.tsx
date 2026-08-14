@@ -189,7 +189,17 @@ export const InvoiceMetaSection: React.FC<Props> = ({ invoice, onChange }) => {
         </div>
 
         <div className="form-group">
-          <label className="form-label">وضعیت فاکتور</label>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <label className="form-label">وضعیت فاکتور</label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', cursor: 'pointer', color: 'var(--text-secondary)' }}>
+              <input
+                type="checkbox"
+                checked={invoice.showStatusBadge}
+                onChange={(e) => onChange({ showStatusBadge: e.target.checked })}
+              />
+              <span>نمایش در برگه فاکتور</span>
+            </label>
+          </div>
           <select
             className="form-select"
             value={invoice.status}

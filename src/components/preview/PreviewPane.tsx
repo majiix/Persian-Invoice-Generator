@@ -13,6 +13,8 @@ import { Invoice } from '../../types/invoice';
 import { TemplateRenderer } from '../templates/TemplateRenderer';
 import { exportToImage, exportToJSON, exportToPDF, exportToWord } from '../../utils/exporters';
 
+import { SecondPageSheet } from '../templates/SecondPageSheet';
+
 interface Props {
   invoice: Invoice;
   onShowToast: (msg: string, type?: 'success' | 'error' | 'info') => void;
@@ -196,7 +198,17 @@ export const PreviewPane: React.FC<Props> = ({
       <div className="preview-scroll-container">
         <div className="invoice-paper-wrapper" style={{ transform: `scale(${zoom})` }}>
           <div id="invoice-preview-sheet" ref={previewRef}>
-            <TemplateRenderer invoice={invoice} />
+            {/* Page 1: Main Invoice Sheet */}
+            <div className="invoice-page-sheet">
+              <TemplateRenderer invoice={invoice} />
+            </div>
+
+            {/* Page 2: Comments / Attachment Sheet */}
+            {invoice.enableSecondPage && (
+              <div className="invoice-page-sheet">
+                <SecondPageSheet invoice={invoice} />
+              </div>
+            )}
           </div>
         </div>
       </div>

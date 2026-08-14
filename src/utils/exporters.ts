@@ -11,6 +11,7 @@ import {
   AlignmentType,
   WidthType,
   HeadingLevel,
+  PageBreak,
 } from 'docx';
 import { saveAs } from 'file-saver';
 import { CURRENCY_LABELS, Invoice, STATUS_LABELS } from '../types/invoice';
@@ -27,24 +28,8 @@ export async function exportToPDF(element: HTMLElement, fileName: string): Promi
       await document.fonts.ready;
     }
 
-    const canvas = await html2canvas(element, {
-      scale: 2.5,
-      useCORS: true,
-      allowTaint: true,
-      backgroundColor: '#ffffff',
-      logging: false,
-      onclone: (clonedDoc) => {
-        const clonedEl = clonedDoc.getElementById('invoice-preview-sheet');
-        if (clonedEl) {
-          clonedEl.style.boxShadow = 'none';
-          clonedEl.style.margin = '0';
-          clonedEl.style.transform = 'none';
-          clonedEl.style.borderRadius = '0';
-        }
-      },
-    });
+    const pageElements = Array.from(element.querySelectorAll<HTMLElement>('.invoice-page-sheet'));
 
-    const imgData = canvas.toDataURL('image/jpeg', 0.98);
     const pdf = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
@@ -52,26 +37,34 @@ export async function exportToPDF(element: HTMLElement, fileName: string): Promi
       compress: true,
     });
 
-    const pdfWidth = 210; // A4 width in mm
-    const pdfHeight = 297; // A4 height in mm
-    const imgWidth = pdfWidth;
-    const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+    if (pageElements.length > 0) {
+      for (let i = 0; i < pageElements.length; i++) {
+        if (i > 0) {
+          pdf.addPage();
+        }
+        const pageEl = pageElements[i];
+        const canvas = await html2canvas(pageEl, {
+          scale: 2.5,
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: '#ffffff',
+          logging: false,
+        });
 
-    if (imgHeight <= pdfHeight) {
-      pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
-    } else {
-      let heightLeft = imgHeight;
-      let position = 0;
-
-      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pdfHeight;
-
-      while (heightLeft > 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pdfHeight;
+        const imgData = canvas.toDataURL('image/jpeg', 0.98);
+        pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297);
       }
+    } else {
+      const canvas = await html2canvas(element, {
+        scale: 2.5,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+      });
+
+      const imgData = canvas.toDataURL('image/jpeg', 0.98);
+      pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297);
     }
 
     pdf.save(`${fileName}.pdf`);
@@ -181,14 +174,18 @@ export async function exportToWord(invoice: Invoice, fileName: string): Promise<
                     }),
                     new TableCell({
                       children: [
-                        new Paragraph({
-                          bidirectional: true,
-                          alignment: AlignmentType.LEFT,
-                          children: [
-                            new TextRun({ text: 'وضعیت: ', bold: true }),
-                            new TextRun({ text: STATUS_LABELS[invoice.status]?.label || invoice.status }),
-                          ],
-                        }),
+                        ...(invoice.showStatusBadge
+                          ? [
+                              new Paragraph({
+                                bidirectional: true,
+                                alignment: AlignmentType.LEFT,
+                                children: [
+                                  new TextRun({ text: 'وضعیت: ', bold: true }),
+                                  new TextRun({ text: STATUS_LABELS[invoice.status]?.label || invoice.status }),
+                                ],
+                              }),
+                            ]
+                          : []),
                         new Paragraph({
                           bidirectional: true,
                           alignment: AlignmentType.LEFT,
@@ -451,6 +448,122 @@ export async function exportToWord(invoice: Invoice, fileName: string): Promise<
                   }),
                 ]
               : []),
+
+            // Signatures row if enabled
+            ...(invoice.showSellerSignature || invoice.showBuyerSignature
+              ? [
+                  new Paragraph({ text: '', spacing: { before: 200 } }),
+                  new Table({
+                    width: { size: 100, type: WidthType.PERCENTAGE },
+                    rows: [
+                      new TableRow({
+                        children: [
+                          new TableCell({
+                            children: [
+                              new Paragraph({
+                                bidirectional: true,
+                                alignment: AlignmentType.CENTER,
+                                children: [
+                                  new TextRun({
+                                    text: invoice.showSellerSignature ? 'مهر و امضای فروشنده' : '',
+                                  }),
+                                ],
+                              }),
+                            ],
+                          }),
+                          new TableCell({
+                            children: [
+                              new Paragraph({
+                                bidirectional: true,
+                                alignment: AlignmentType.CENTER,
+                                children: [
+                                  new TextRun({
+                                    text: invoice.showBuyerSignature ? 'امضا و تأیید خریدار' : '',
+                                  }),
+                                ],
+                              }),
+                            ],
+                          }),
+                        ],
+                      }),
+                    ],
+                  }),
+                ]
+              : []),
+
+            // Second Page (پیوست و توضیحات تکمیلی)
+            ...(invoice.enableSecondPage
+              ? [
+                  new Paragraph({
+                    children: [new PageBreak()],
+                  }),
+                  new Paragraph({
+                    text: invoice.secondPageTitle || 'پیوست / شرایط و توضیحات تکمیلی',
+                    heading: HeadingLevel.HEADING_2,
+                    alignment: AlignmentType.CENTER,
+                    bidirectional: true,
+                    spacing: { after: 150 },
+                  }),
+                  new Paragraph({
+                    text: `پیوست فاکتور شماره ${invoice.invoiceNumber} | تاریخ: ${invoice.issueDate}`,
+                    alignment: AlignmentType.CENTER,
+                    bidirectional: true,
+                    spacing: { after: 200 },
+                  }),
+                  ...(invoice.secondPageContent || '')
+                    .split('\n')
+                    .filter((line) => line.trim().length > 0)
+                    .map(
+                      (line) =>
+                        new Paragraph({
+                          text: line,
+                          alignment: AlignmentType.RIGHT,
+                          bidirectional: true,
+                          spacing: { after: 120 },
+                        })
+                    ),
+                  ...(invoice.secondPageSignatures && (invoice.showSellerSignature || invoice.showBuyerSignature)
+                    ? [
+                        new Paragraph({ text: '', spacing: { before: 300 } }),
+                        new Table({
+                          width: { size: 100, type: WidthType.PERCENTAGE },
+                          rows: [
+                            new TableRow({
+                              children: [
+                                new TableCell({
+                                  children: [
+                                    new Paragraph({
+                                      bidirectional: true,
+                                      alignment: AlignmentType.CENTER,
+                                      children: [
+                                        new TextRun({
+                                          text: invoice.showSellerSignature ? 'مهر و امضای فروشنده' : '',
+                                        }),
+                                      ],
+                                    }),
+                                  ],
+                                }),
+                                new TableCell({
+                                  children: [
+                                    new Paragraph({
+                                      bidirectional: true,
+                                      alignment: AlignmentType.CENTER,
+                                      children: [
+                                        new TextRun({
+                                          text: invoice.showBuyerSignature ? 'امضا و تأیید خریدار' : '',
+                                        }),
+                                      ],
+                                    }),
+                                  ],
+                                }),
+                              ],
+                            }),
+                          ],
+                        }),
+                      ]
+                    : []),
+                ]
+              : []),
           ],
         },
       ],
@@ -496,6 +609,14 @@ export function validateAndParseInvoiceJSON(jsonText: string): { success: boolea
     if (!data.id) {
       data.id = 'inv-' + Date.now().toString(36);
     }
+
+    data.showStatusBadge = data.showStatusBadge ?? true;
+    data.showSellerSignature = data.showSellerSignature ?? true;
+    data.showBuyerSignature = data.showBuyerSignature ?? true;
+    data.enableSecondPage = data.enableSecondPage ?? false;
+    data.secondPageTitle = data.secondPageTitle || 'پیوست / شرایط و توضیحات تکمیلی قرارداد';
+    data.secondPageContent = data.secondPageContent || '';
+    data.secondPageSignatures = data.secondPageSignatures ?? true;
 
     // Normalize bank accounts array
     let accounts = [];

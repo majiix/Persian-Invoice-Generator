@@ -32,12 +32,14 @@ export const ModernTemplate: React.FC<TemplateProps> = ({ invoice }) => {
         </div>
 
         <div className="modern-invoice-title-block">
-          <div
-            className="modern-badge-status"
-            style={{ backgroundColor: statusInfo.bg, color: statusInfo.color }}
-          >
-            {statusInfo.label}
-          </div>
+          {invoice.showStatusBadge && (
+            <div
+              className="modern-badge-status"
+              style={{ backgroundColor: statusInfo.bg, color: statusInfo.color }}
+            >
+              {statusInfo.label}
+            </div>
+          )}
           <div className="modern-meta-card">
             <div>
               <strong>شماره فاکتور: </strong>
@@ -197,17 +199,24 @@ export const ModernTemplate: React.FC<TemplateProps> = ({ invoice }) => {
       </div>
 
       {/* Signature Area */}
-      <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'space-between', paddingTop: '16px' }}>
-        <div style={{ textAlign: 'center', width: '180px' }}>
-          <div style={{ fontSize: '11.5px', color: '#64748b', marginBottom: '8px' }}>مهر و امضای صادرکننده</div>
-          {invoice.signatureImage && (
-            <img src={invoice.signatureImage} alt="امضا" style={{ maxHeight: '48px', objectFit: 'contain' }} />
-          )}
+      {(invoice.showSellerSignature || invoice.showBuyerSignature) && (
+        <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'space-between', paddingTop: '16px' }}>
+          {invoice.showSellerSignature ? (
+            <div style={{ textAlign: 'center', width: '180px' }}>
+              <div style={{ fontSize: '11.5px', color: '#64748b', marginBottom: '8px' }}>مهر و امضای صادرکننده</div>
+              {invoice.signatureImage && (
+                <img src={invoice.signatureImage} alt="امضا" style={{ maxHeight: '48px', objectFit: 'contain' }} />
+              )}
+            </div>
+          ) : <div />}
+
+          {invoice.showBuyerSignature ? (
+            <div style={{ textAlign: 'center', width: '180px' }}>
+              <div style={{ fontSize: '11.5px', color: '#64748b', marginBottom: '8px' }}>امضا و تأیید خریدار</div>
+            </div>
+          ) : <div />}
         </div>
-        <div style={{ textAlign: 'center', width: '180px' }}>
-          <div style={{ fontSize: '11.5px', color: '#64748b' }}>امضا و تأیید خریدار</div>
-        </div>
-      </div>
+      )}
     </div>
   );
 };

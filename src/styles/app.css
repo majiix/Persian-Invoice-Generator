@@ -209,10 +209,12 @@
   overflow-x: auto;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.02);
 }
 
 .line-items-table {
   width: 100%;
+  min-width: 780px;
   border-collapse: collapse;
   font-size: var(--text-sm);
 }
@@ -220,17 +222,22 @@
 .line-items-table th {
   background-color: var(--bg-surface-subtle);
   color: var(--text-secondary);
-  font-weight: 600;
-  padding: var(--space-3) var(--space-3);
+  font-weight: 700;
+  font-size: var(--text-xs);
+  padding: 10px 10px;
   text-align: right;
   border-bottom: 1px solid var(--border-color);
   white-space: nowrap;
 }
 
 .line-items-table td {
-  padding: var(--space-2) var(--space-3);
+  padding: 8px 8px;
   border-bottom: 1px solid var(--border-color);
   vertical-align: middle;
+}
+
+.line-items-table tr:hover td {
+  background-color: rgba(59, 130, 246, 0.02);
 }
 
 .line-items-table tr:last-child td {
@@ -241,6 +248,7 @@
   font-weight: 700;
   color: var(--text-primary);
   white-space: nowrap;
+  font-size: 13px;
 }
 
 /* Summary Card */
@@ -367,6 +375,12 @@
 
 /* Paper Sheet (Exact A4 proportion in CSS) */
 #invoice-preview-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.invoice-page-sheet {
   background-color: #ffffff;
   color: #1e293b;
   width: var(--invoice-width);

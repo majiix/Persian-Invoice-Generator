@@ -173,14 +173,20 @@ export const MinimalTemplate: React.FC<TemplateProps> = ({ invoice }) => {
       </div>
 
       {/* Minimal Signature Footer */}
-      <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'flex-start', paddingTop: '20px' }}>
-        {invoice.signatureImage && (
-          <div>
-            <div style={{ fontSize: '11px', color: '#9ca3af', marginBottom: '4px' }}>امضای مجاز:</div>
-            <img src={invoice.signatureImage} alt="امضا" style={{ maxHeight: '42px', objectFit: 'contain' }} />
-          </div>
-        )}
-      </div>
+      {invoice.showSellerSignature && (
+        <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'flex-start', paddingTop: '20px' }}>
+          {invoice.signatureImage ? (
+            <div>
+              <div style={{ fontSize: '11px', color: '#9ca3af', marginBottom: '4px' }}>امضای مجاز:</div>
+              <img src={invoice.signatureImage} alt="امضا" style={{ maxHeight: '42px', objectFit: 'contain' }} />
+            </div>
+          ) : (
+            <div style={{ fontSize: '11px', color: '#9ca3af', borderTop: '1px dashed #d1d5db', paddingTop: '6px', width: '140px' }}>
+              محل مهر و امضای صادرکننده
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
