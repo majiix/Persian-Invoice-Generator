@@ -12,6 +12,9 @@ import {
   WidthType,
   HeadingLevel,
   PageBreak,
+  BorderStyle,
+  TableLayoutType,
+  VerticalAlign,
 } from 'docx';
 import { saveAs } from 'file-saver';
 import { CURRENCY_LABELS, Invoice, STATUS_LABELS } from '../types/invoice';
@@ -95,17 +98,16 @@ export async function exportToImage(element: HTMLElement, fileName: string): Pro
         if (clonedEl) {
           clonedEl.style.boxShadow = 'none';
           clonedEl.style.margin = '0';
+          clonedEl.style.transform = 'none';
           clonedEl.style.borderRadius = '0';
         }
       },
     });
 
-    canvas.toBlob((blob) => {
-      if (blob) {
-        saveAs(blob, `${fileName}.png`);
-      }
-    }, 'image/png');
-
+    const link = document.createElement('a');
+    link.download = `${fileName}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
     return true;
   } catch (error) {
     console.error('Error generating Image:', error);
@@ -114,7 +116,7 @@ export async function exportToImage(element: HTMLElement, fileName: string): Pro
 }
 
 /**
- * Generates and downloads a Microsoft Word (.docx) file with proper RTL alignment.
+ * Generates and downloads a beautifully styled, high-end Microsoft Word (.docx) file with full RTL support.
  */
 export async function exportToWord(invoice: Invoice, fileName: string): Promise<boolean> {
   try {
@@ -123,13 +125,52 @@ export async function exportToWord(invoice: Invoice, fileName: string): Promise<
     const totals = calculateInvoiceTotals(invoice);
     const bankAccounts = invoice.payment.bankAccounts || [];
 
+    const FONT_NAME = 'Vazirmatn';
+
+    const lightBorder = {
+      style: BorderStyle.SINGLE,
+      size: 1,
+      color: 'CBD5E1',
+    };
+
+    const cellBorders = {
+      top: lightBorder,
+      bottom: lightBorder,
+      left: lightBorder,
+      right: lightBorder,
+    };
+
+    const dashedBorder = {
+      style: BorderStyle.DASHED,
+      size: 1,
+      color: '94A3B8',
+    };
+
+    const cellMargins = { top: 120, bottom: 120, left: 140, right: 140 };
+
     const doc = new Document({
+      styles: {
+        default: {
+          document: {
+            run: {
+              font: FONT_NAME,
+              size: 21, // 10.5pt
+              rightToLeft: true,
+              color: '1E293B',
+            },
+            paragraph: {
+              alignment: AlignmentType.RIGHT,
+              spacing: { line: 280, before: 40, after: 40 },
+            },
+          },
+        },
+      },
       sections: [
         {
           properties: {
             page: {
               margin: {
-                top: 720,
+                top: 720, // 0.5 in
                 bottom: 720,
                 left: 720,
                 right: 720,
@@ -137,63 +178,102 @@ export async function exportToWord(invoice: Invoice, fileName: string): Promise<
             },
           },
           children: [
-            // Title & Invoice Header
+            // Title
             new Paragraph({
               text: invoice.title || 'فاکتور فروش کالا و خدمات',
-              heading: HeadingLevel.HEADING_1,
               alignment: AlignmentType.CENTER,
               bidirectional: true,
-              spacing: { after: 200 },
+              spacing: { before: 100, after: 180 },
+              children: [
+                new TextRun({
+                  text: invoice.title || 'فاکتور فروش کالا و خدمات',
+                  bold: true,
+                  size: 32, // 16pt
+                  color: '1E3A8A',
+                  font: FONT_NAME,
+                  rightToLeft: true,
+                }),
+              ],
             }),
 
-            // Meta Info (Invoice Number, Date, Status)
+            // Meta Info Table (Invoice Number, Date, Due Date, Status)
             new Table({
               width: { size: 100, type: WidthType.PERCENTAGE },
+              visuallyRightToLeft: true,
+              layout: TableLayoutType.FIXED,
+              margins: cellMargins,
+              borders: {
+                top: lightBorder,
+                bottom: lightBorder,
+                left: lightBorder,
+                right: lightBorder,
+                insideHorizontal: lightBorder,
+                insideVertical: lightBorder,
+              },
               rows: [
                 new TableRow({
                   children: [
+                    // Column 1 (Right): Number & Issue Date
                     new TableCell({
+                      width: { size: 50, type: WidthType.PERCENTAGE },
+                      shading: { fill: 'F8FAFC' },
+                      borders: cellBorders,
                       children: [
                         new Paragraph({
                           bidirectional: true,
                           alignment: AlignmentType.RIGHT,
                           children: [
-                            new TextRun({ text: 'شماره فاکتور: ', bold: true }),
-                            new TextRun({ text: invoice.invoiceNumber }),
+                            new TextRun({ text: 'شماره فاکتور: ', bold: true, color: '475569', font: FONT_NAME, rightToLeft: true }),
+                            new TextRun({ text: invoice.invoiceNumber, bold: true, color: '0F172A', font: FONT_NAME, rightToLeft: true }),
                           ],
                         }),
                         new Paragraph({
                           bidirectional: true,
                           alignment: AlignmentType.RIGHT,
                           children: [
-                            new TextRun({ text: 'تاریخ صدور: ', bold: true }),
-                            new TextRun({ text: invoice.issueDate }),
+                            new TextRun({ text: 'تاریخ صدور: ', bold: true, color: '475569', font: FONT_NAME, rightToLeft: true }),
+                            new TextRun({ text: invoice.issueDate, color: '0F172A', font: FONT_NAME, rightToLeft: true }),
                           ],
                         }),
                       ],
                     }),
+
+                    // Column 2 (Left): Due Date & Status
                     new TableCell({
+                      width: { size: 50, type: WidthType.PERCENTAGE },
+                      shading: { fill: 'F8FAFC' },
+                      borders: cellBorders,
                       children: [
-                        ...(invoice.showStatusBadge
+                        ...(invoice.dueDate
                           ? [
                               new Paragraph({
                                 bidirectional: true,
-                                alignment: AlignmentType.LEFT,
+                                alignment: AlignmentType.RIGHT,
                                 children: [
-                                  new TextRun({ text: 'وضعیت: ', bold: true }),
-                                  new TextRun({ text: STATUS_LABELS[invoice.status]?.label || invoice.status }),
+                                  new TextRun({ text: 'تاریخ سررسید: ', bold: true, color: '475569', font: FONT_NAME, rightToLeft: true }),
+                                  new TextRun({ text: invoice.dueDate, color: '0F172A', font: FONT_NAME, rightToLeft: true }),
                                 ],
                               }),
                             ]
                           : []),
-                        new Paragraph({
-                          bidirectional: true,
-                          alignment: AlignmentType.LEFT,
-                          children: [
-                            new TextRun({ text: 'تاریخ سررسید: ', bold: true }),
-                            new TextRun({ text: invoice.dueDate || '-' }),
-                          ],
-                        }),
+                        ...(invoice.showStatusBadge
+                          ? [
+                              new Paragraph({
+                                bidirectional: true,
+                                alignment: AlignmentType.RIGHT,
+                                children: [
+                                  new TextRun({ text: 'وضعیت پرداخت: ', bold: true, color: '475569', font: FONT_NAME, rightToLeft: true }),
+                                  new TextRun({
+                                    text: STATUS_LABELS[invoice.status]?.label || invoice.status,
+                                    bold: true,
+                                    color: invoice.status === 'paid' ? '15803D' : invoice.status === 'unpaid' ? 'B45309' : '475569',
+                                    font: FONT_NAME,
+                                    rightToLeft: true,
+                                  }),
+                                ],
+                              }),
+                            ]
+                          : []),
                       ],
                     }),
                   ],
@@ -201,98 +281,161 @@ export async function exportToWord(invoice: Invoice, fileName: string): Promise<
               ],
             }),
 
-            new Paragraph({ text: '', spacing: { after: 200 } }),
+            new Paragraph({ text: '', spacing: { before: 120, after: 120 } }),
 
             // Seller & Buyer Table
             new Table({
               width: { size: 100, type: WidthType.PERCENTAGE },
+              visuallyRightToLeft: true,
+              layout: TableLayoutType.FIXED,
+              margins: cellMargins,
+              borders: {
+                top: lightBorder,
+                bottom: lightBorder,
+                left: lightBorder,
+                right: lightBorder,
+                insideHorizontal: lightBorder,
+                insideVertical: lightBorder,
+              },
               rows: [
+                // Headers Row
                 new TableRow({
                   children: [
-                    // Seller
                     new TableCell({
+                      width: { size: 50, type: WidthType.PERCENTAGE },
+                      shading: { fill: 'E2E8F0' },
+                      borders: cellBorders,
                       children: [
                         new Paragraph({
-                          children: [new TextRun({ text: 'مشخصات فروشنده', bold: true })],
                           alignment: AlignmentType.RIGHT,
                           bidirectional: true,
-                          spacing: { after: 100 },
-                        }),
-                        new Paragraph({
-                          bidirectional: true,
-                          alignment: AlignmentType.RIGHT,
                           children: [
-                            new TextRun({ text: 'نام شرکت/شخص: ' }),
-                            new TextRun({ text: invoice.business.name, bold: true }),
-                          ],
-                        }),
-                        new Paragraph({
-                          bidirectional: true,
-                          alignment: AlignmentType.RIGHT,
-                          children: [
-                            new TextRun({ text: 'تلفن: ' }),
-                            new TextRun({ text: invoice.business.phone || '-' }),
-                          ],
-                        }),
-                        new Paragraph({
-                          bidirectional: true,
-                          alignment: AlignmentType.RIGHT,
-                          children: [
-                            new TextRun({ text: 'شناسه ملی/اقتصادی: ' }),
-                            new TextRun({ text: invoice.business.nationalId || invoice.business.economicCode || '-' }),
-                          ],
-                        }),
-                        new Paragraph({
-                          bidirectional: true,
-                          alignment: AlignmentType.RIGHT,
-                          children: [
-                            new TextRun({ text: 'نشانی: ' }),
-                            new TextRun({ text: invoice.business.address || '-' }),
+                            new TextRun({ text: 'مشخصات فروشنده (صادرکننده)', bold: true, color: '0F172A', font: FONT_NAME, rightToLeft: true }),
                           ],
                         }),
                       ],
                     }),
-                    // Buyer
                     new TableCell({
+                      width: { size: 50, type: WidthType.PERCENTAGE },
+                      shading: { fill: 'E2E8F0' },
+                      borders: cellBorders,
                       children: [
                         new Paragraph({
-                          children: [new TextRun({ text: 'مشخصات خریدار', bold: true })],
                           alignment: AlignmentType.RIGHT,
                           bidirectional: true,
-                          spacing: { after: 100 },
+                          children: [
+                            new TextRun({ text: 'مشخصات خریدار (مشتری)', bold: true, color: '0F172A', font: FONT_NAME, rightToLeft: true }),
+                          ],
                         }),
+                      ],
+                    }),
+                  ],
+                }),
+
+                // Content Row
+                new TableRow({
+                  children: [
+                    // Seller Details
+                    new TableCell({
+                      width: { size: 50, type: WidthType.PERCENTAGE },
+                      borders: cellBorders,
+                      children: [
                         new Paragraph({
                           bidirectional: true,
                           alignment: AlignmentType.RIGHT,
                           children: [
-                            new TextRun({ text: 'نام شرکت/شخص: ' }),
-                            new TextRun({ text: invoice.client.name, bold: true }),
+                            new TextRun({ text: 'نام شرکت/شخص: ', bold: true, font: FONT_NAME, rightToLeft: true }),
+                            new TextRun({ text: invoice.business.name || '-', font: FONT_NAME, rightToLeft: true }),
                           ],
                         }),
+                        ...(invoice.business.economicCode || invoice.business.nationalId
+                          ? [
+                              new Paragraph({
+                                bidirectional: true,
+                                alignment: AlignmentType.RIGHT,
+                                children: [
+                                  new TextRun({ text: 'شناسه ملی/اقتصادی: ', bold: true, font: FONT_NAME, rightToLeft: true }),
+                                  new TextRun({ text: invoice.business.nationalId || invoice.business.economicCode || '-', font: FONT_NAME, rightToLeft: true }),
+                                ],
+                              }),
+                            ]
+                          : []),
+                        ...(invoice.business.phone
+                          ? [
+                              new Paragraph({
+                                bidirectional: true,
+                                alignment: AlignmentType.RIGHT,
+                                children: [
+                                  new TextRun({ text: 'تلفن تماس: ', bold: true, font: FONT_NAME, rightToLeft: true }),
+                                  new TextRun({ text: invoice.business.phone, font: FONT_NAME, rightToLeft: true }),
+                                ],
+                              }),
+                            ]
+                          : []),
+                        ...(invoice.business.address
+                          ? [
+                              new Paragraph({
+                                bidirectional: true,
+                                alignment: AlignmentType.RIGHT,
+                                children: [
+                                  new TextRun({ text: 'نشانی: ', bold: true, font: FONT_NAME, rightToLeft: true }),
+                                  new TextRun({ text: invoice.business.address, font: FONT_NAME, rightToLeft: true }),
+                                ],
+                              }),
+                            ]
+                          : []),
+                      ],
+                    }),
+
+                    // Buyer Details
+                    new TableCell({
+                      width: { size: 50, type: WidthType.PERCENTAGE },
+                      borders: cellBorders,
+                      children: [
                         new Paragraph({
                           bidirectional: true,
                           alignment: AlignmentType.RIGHT,
                           children: [
-                            new TextRun({ text: 'تلفن: ' }),
-                            new TextRun({ text: invoice.client.phone || '-' }),
+                            new TextRun({ text: 'نام شرکت/شخص: ', bold: true, font: FONT_NAME, rightToLeft: true }),
+                            new TextRun({ text: invoice.client.name || '-', font: FONT_NAME, rightToLeft: true }),
                           ],
                         }),
-                        new Paragraph({
-                          bidirectional: true,
-                          alignment: AlignmentType.RIGHT,
-                          children: [
-                            new TextRun({ text: 'شناسه ملی/اقتصادی: ' }),
-                            new TextRun({ text: invoice.client.nationalId || invoice.client.economicCode || '-' }),
-                          ],
-                        }),
-                        new Paragraph({
-                          bidirectional: true,
-                          alignment: AlignmentType.RIGHT,
-                          children: [
-                            new TextRun({ text: 'نشانی: ' }),
-                            new TextRun({ text: invoice.client.address || '-' }),
-                          ],
-                        }),
+                        ...(invoice.client.economicCode || invoice.client.nationalId
+                          ? [
+                              new Paragraph({
+                                bidirectional: true,
+                                alignment: AlignmentType.RIGHT,
+                                children: [
+                                  new TextRun({ text: 'شناسه ملی/اقتصادی: ', bold: true, font: FONT_NAME, rightToLeft: true }),
+                                  new TextRun({ text: invoice.client.nationalId || invoice.client.economicCode || '-', font: FONT_NAME, rightToLeft: true }),
+                                ],
+                              }),
+                            ]
+                          : []),
+                        ...(invoice.client.phone
+                          ? [
+                              new Paragraph({
+                                bidirectional: true,
+                                alignment: AlignmentType.RIGHT,
+                                children: [
+                                  new TextRun({ text: 'تلفن تماس: ', bold: true, font: FONT_NAME, rightToLeft: true }),
+                                  new TextRun({ text: invoice.client.phone, font: FONT_NAME, rightToLeft: true }),
+                                ],
+                              }),
+                            ]
+                          : []),
+                        ...(invoice.client.address
+                          ? [
+                              new Paragraph({
+                                bidirectional: true,
+                                alignment: AlignmentType.RIGHT,
+                                children: [
+                                  new TextRun({ text: 'نشانی: ', bold: true, font: FONT_NAME, rightToLeft: true }),
+                                  new TextRun({ text: invoice.client.address, font: FONT_NAME, rightToLeft: true }),
+                                ],
+                              }),
+                            ]
+                          : []),
                       ],
                     }),
                   ],
@@ -300,63 +443,227 @@ export async function exportToWord(invoice: Invoice, fileName: string): Promise<
               ],
             }),
 
-            new Paragraph({ text: '', spacing: { after: 200 } }),
+            new Paragraph({ text: '', spacing: { before: 140, after: 140 } }),
 
-            // Items Table
+            // Line Items Table
             new Table({
               width: { size: 100, type: WidthType.PERCENTAGE },
+              visuallyRightToLeft: true,
+              layout: TableLayoutType.FIXED,
+              margins: cellMargins,
+              borders: {
+                top: lightBorder,
+                bottom: lightBorder,
+                left: lightBorder,
+                right: lightBorder,
+                insideHorizontal: lightBorder,
+                insideVertical: lightBorder,
+              },
               rows: [
-                // Table Header
+                // Header Row
                 new TableRow({
                   children: [
                     new TableCell({
-                      children: [new Paragraph({ children: [new TextRun({ text: 'ردیف', bold: true })], alignment: AlignmentType.CENTER, bidirectional: true })],
+                      width: { size: 6, type: WidthType.PERCENTAGE },
+                      shading: { fill: '1E293B' },
+                      borders: cellBorders,
+                      verticalAlign: VerticalAlign.CENTER,
+                      children: [
+                        new Paragraph({
+                          alignment: AlignmentType.CENTER,
+                          bidirectional: true,
+                          children: [new TextRun({ text: '#', bold: true, color: 'FFFFFF', font: FONT_NAME, rightToLeft: true })],
+                        }),
+                      ],
                     }),
                     new TableCell({
-                      children: [new Paragraph({ children: [new TextRun({ text: 'شرح کالا یا خدمات', bold: true })], alignment: AlignmentType.RIGHT, bidirectional: true })],
+                      width: { size: 36, type: WidthType.PERCENTAGE },
+                      shading: { fill: '1E293B' },
+                      borders: cellBorders,
+                      verticalAlign: VerticalAlign.CENTER,
+                      children: [
+                        new Paragraph({
+                          alignment: AlignmentType.RIGHT,
+                          bidirectional: true,
+                          children: [new TextRun({ text: 'شرح کالا یا خدمات', bold: true, color: 'FFFFFF', font: FONT_NAME, rightToLeft: true })],
+                        }),
+                      ],
                     }),
                     new TableCell({
-                      children: [new Paragraph({ children: [new TextRun({ text: 'تعداد', bold: true })], alignment: AlignmentType.CENTER, bidirectional: true })],
+                      width: { size: 12, type: WidthType.PERCENTAGE },
+                      shading: { fill: '1E293B' },
+                      borders: cellBorders,
+                      verticalAlign: VerticalAlign.CENTER,
+                      children: [
+                        new Paragraph({
+                          alignment: AlignmentType.CENTER,
+                          bidirectional: true,
+                          children: [new TextRun({ text: 'تعداد / واحد', bold: true, color: 'FFFFFF', font: FONT_NAME, rightToLeft: true })],
+                        }),
+                      ],
                     }),
                     new TableCell({
-                      children: [new Paragraph({ children: [new TextRun({ text: `قیمت واحد (${currencyName})`, bold: true })], alignment: AlignmentType.CENTER, bidirectional: true })],
+                      width: { size: 16, type: WidthType.PERCENTAGE },
+                      shading: { fill: '1E293B' },
+                      borders: cellBorders,
+                      verticalAlign: VerticalAlign.CENTER,
+                      children: [
+                        new Paragraph({
+                          alignment: AlignmentType.CENTER,
+                          bidirectional: true,
+                          children: [new TextRun({ text: `قیمت واحد (${currencyName})`, bold: true, color: 'FFFFFF', font: FONT_NAME, rightToLeft: true })],
+                        }),
+                      ],
                     }),
+                    ...(invoice.discountEnabled
+                      ? [
+                          new TableCell({
+                            width: { size: 10, type: WidthType.PERCENTAGE },
+                            shading: { fill: '1E293B' },
+                            borders: cellBorders,
+                            verticalAlign: VerticalAlign.CENTER,
+                            children: [
+                              new Paragraph({
+                                alignment: AlignmentType.CENTER,
+                                bidirectional: true,
+                                children: [new TextRun({ text: 'تخفیف', bold: true, color: 'FFFFFF', font: FONT_NAME, rightToLeft: true })],
+                              }),
+                            ],
+                          }),
+                        ]
+                      : []),
+                    ...(invoice.taxEnabled && invoice.taxType === 'per_item'
+                      ? [
+                          new TableCell({
+                            width: { size: 8, type: WidthType.PERCENTAGE },
+                            shading: { fill: '1E293B' },
+                            borders: cellBorders,
+                            verticalAlign: VerticalAlign.CENTER,
+                            children: [
+                              new Paragraph({
+                                alignment: AlignmentType.CENTER,
+                                bidirectional: true,
+                                children: [new TextRun({ text: 'مالیات', bold: true, color: 'FFFFFF', font: FONT_NAME, rightToLeft: true })],
+                              }),
+                            ],
+                          }),
+                        ]
+                      : []),
                     new TableCell({
-                      children: [new Paragraph({ children: [new TextRun({ text: 'تخفیف', bold: true })], alignment: AlignmentType.CENTER, bidirectional: true })],
-                    }),
-                    new TableCell({
-                      children: [new Paragraph({ children: [new TextRun({ text: 'مالیات', bold: true })], alignment: AlignmentType.CENTER, bidirectional: true })],
-                    }),
-                    new TableCell({
-                      children: [new Paragraph({ children: [new TextRun({ text: `مبلغ کل (${currencyName})`, bold: true })], alignment: AlignmentType.CENTER, bidirectional: true })],
+                      width: { size: 18, type: WidthType.PERCENTAGE },
+                      shading: { fill: '1E293B' },
+                      borders: cellBorders,
+                      verticalAlign: VerticalAlign.CENTER,
+                      children: [
+                        new Paragraph({
+                          alignment: AlignmentType.CENTER,
+                          bidirectional: true,
+                          children: [new TextRun({ text: `مبلغ کل (${currencyName})`, bold: true, color: 'FFFFFF', font: FONT_NAME, rightToLeft: true })],
+                        }),
+                      ],
                     }),
                   ],
                 }),
-                // Table Rows
+
+                // Items Rows
                 ...invoice.items.map((item, index) => {
-                  const itemCalc = calculateLineItemTotal(item);
+                  const itemCalc = calculateLineItemTotal(item, {
+                    discountEnabled: invoice.discountEnabled,
+                    taxEnabled: invoice.taxEnabled,
+                    taxType: invoice.taxType,
+                  });
+                  const isEven = index % 2 === 1;
+                  const rowBg = isEven ? 'F8FAFC' : 'FFFFFF';
+
                   return new TableRow({
                     children: [
                       new TableCell({
-                        children: [new Paragraph({ text: formatAmount(index + 1, isPersianDigits), alignment: AlignmentType.CENTER, bidirectional: true })],
+                        shading: { fill: rowBg },
+                        borders: cellBorders,
+                        children: [
+                          new Paragraph({
+                            alignment: AlignmentType.CENTER,
+                            bidirectional: true,
+                            children: [new TextRun({ text: formatAmount(index + 1, isPersianDigits), font: FONT_NAME, rightToLeft: true })],
+                          }),
+                        ],
                       }),
                       new TableCell({
-                        children: [new Paragraph({ text: item.description, alignment: AlignmentType.RIGHT, bidirectional: true })],
+                        shading: { fill: rowBg },
+                        borders: cellBorders,
+                        children: [
+                          new Paragraph({
+                            alignment: AlignmentType.RIGHT,
+                            bidirectional: true,
+                            children: [
+                              new TextRun({ text: item.description, bold: true, font: FONT_NAME, rightToLeft: true }),
+                              ...(item.itemCode ? [new TextRun({ text: ` (کد: ${item.itemCode})`, size: 18, color: '64748B', font: FONT_NAME, rightToLeft: true })] : []),
+                            ],
+                          }),
+                        ],
                       }),
                       new TableCell({
-                        children: [new Paragraph({ text: `${formatAmount(item.quantity, isPersianDigits)} ${item.unit || ''}`, alignment: AlignmentType.CENTER, bidirectional: true })],
+                        shading: { fill: rowBg },
+                        borders: cellBorders,
+                        children: [
+                          new Paragraph({
+                            alignment: AlignmentType.CENTER,
+                            bidirectional: true,
+                            children: [new TextRun({ text: `${formatAmount(item.quantity, isPersianDigits)} ${item.unit || ''}`, font: FONT_NAME, rightToLeft: true })],
+                          }),
+                        ],
                       }),
                       new TableCell({
-                        children: [new Paragraph({ text: formatAmount(item.unitPrice, isPersianDigits), alignment: AlignmentType.CENTER, bidirectional: true })],
+                        shading: { fill: rowBg },
+                        borders: cellBorders,
+                        children: [
+                          new Paragraph({
+                            alignment: AlignmentType.CENTER,
+                            bidirectional: true,
+                            children: [new TextRun({ text: formatAmount(item.unitPrice, isPersianDigits), font: FONT_NAME, rightToLeft: true })],
+                          }),
+                        ],
                       }),
+                      ...(invoice.discountEnabled
+                        ? [
+                            new TableCell({
+                              shading: { fill: rowBg },
+                              borders: cellBorders,
+                              children: [
+                                new Paragraph({
+                                  alignment: AlignmentType.CENTER,
+                                  bidirectional: true,
+                                  children: [new TextRun({ text: formatAmount(itemCalc.discountAmount, isPersianDigits), color: 'DC2626', font: FONT_NAME, rightToLeft: true })],
+                                }),
+                              ],
+                            }),
+                          ]
+                        : []),
+                      ...(invoice.taxEnabled && invoice.taxType === 'per_item'
+                        ? [
+                            new TableCell({
+                              shading: { fill: rowBg },
+                              borders: cellBorders,
+                              children: [
+                                new Paragraph({
+                                  alignment: AlignmentType.CENTER,
+                                  bidirectional: true,
+                                  children: [new TextRun({ text: formatAmount(itemCalc.taxAmount, isPersianDigits), font: FONT_NAME, rightToLeft: true })],
+                                }),
+                              ],
+                            }),
+                          ]
+                        : []),
                       new TableCell({
-                        children: [new Paragraph({ text: formatAmount(itemCalc.discountAmount, isPersianDigits), alignment: AlignmentType.CENTER, bidirectional: true })],
-                      }),
-                      new TableCell({
-                        children: [new Paragraph({ text: formatAmount(itemCalc.taxAmount, isPersianDigits), alignment: AlignmentType.CENTER, bidirectional: true })],
-                      }),
-                      new TableCell({
-                        children: [new Paragraph({ text: formatAmount(itemCalc.rowTotal, isPersianDigits), alignment: AlignmentType.CENTER, bidirectional: true })],
+                        shading: { fill: rowBg },
+                        borders: cellBorders,
+                        children: [
+                          new Paragraph({
+                            alignment: AlignmentType.CENTER,
+                            bidirectional: true,
+                            children: [new TextRun({ text: formatAmount(itemCalc.rowTotal, isPersianDigits), bold: true, font: FONT_NAME, rightToLeft: true })],
+                          }),
+                        ],
                       }),
                     ],
                   });
@@ -364,114 +671,243 @@ export async function exportToWord(invoice: Invoice, fileName: string): Promise<
               ],
             }),
 
-            new Paragraph({ text: '', spacing: { after: 200 } }),
+            new Paragraph({ text: '', spacing: { before: 120, after: 120 } }),
 
-            // Totals Summary Block
-            new Paragraph({
-              bidirectional: true,
-              alignment: AlignmentType.LEFT,
-              children: [
-                new TextRun({ text: 'جمع کل اقلام: ', bold: true }),
-                new TextRun({ text: `${formatAmount(totals.subtotal, isPersianDigits)} ${currencyName}` }),
-              ],
-            }),
-            new Paragraph({
-              bidirectional: true,
-              alignment: AlignmentType.LEFT,
-              children: [
-                new TextRun({ text: 'مجموع تخفیف: ', bold: true }),
-                new TextRun({ text: `${formatAmount(totals.totalDiscount, isPersianDigits)} ${currencyName}` }),
-              ],
-            }),
-            new Paragraph({
-              bidirectional: true,
-              alignment: AlignmentType.LEFT,
-              children: [
-                new TextRun({ text: 'مجموع مالیات و عوارض: ', bold: true }),
-                new TextRun({ text: `${formatAmount(totals.totalTax, isPersianDigits)} ${currencyName}` }),
-              ],
-            }),
-            new Paragraph({
-              bidirectional: true,
-              alignment: AlignmentType.LEFT,
-              children: [
-                new TextRun({ text: 'مبلغ نهایی قابل پرداخت: ', bold: true, size: 24 }),
-                new TextRun({ text: `${formatAmount(totals.grandTotal, isPersianDigits)} ${currencyName}`, bold: true, size: 24 }),
-              ],
-            }),
-            new Paragraph({
-              bidirectional: true,
-              alignment: AlignmentType.RIGHT,
-              spacing: { before: 100, after: 200 },
-              children: [
-                new TextRun({ text: 'مبلغ به حروف: ', bold: true }),
-                new TextRun({ text: amountToWordsWithCurrency(totals.grandTotal, currencyName) }),
+            // Summary & Totals Box
+            new Table({
+              width: { size: 100, type: WidthType.PERCENTAGE },
+              visuallyRightToLeft: true,
+              layout: TableLayoutType.FIXED,
+              margins: cellMargins,
+              borders: {
+                top: lightBorder,
+                bottom: lightBorder,
+                left: lightBorder,
+                right: lightBorder,
+                insideHorizontal: lightBorder,
+                insideVertical: lightBorder,
+              },
+              rows: [
+                new TableRow({
+                  children: [
+                    // Right: Amount in Words
+                    new TableCell({
+                      width: { size: 55, type: WidthType.PERCENTAGE },
+                      shading: { fill: 'F8FAFC' },
+                      borders: cellBorders,
+                      children: [
+                        new Paragraph({
+                          bidirectional: true,
+                          alignment: AlignmentType.RIGHT,
+                          children: [
+                            new TextRun({ text: 'مبلغ به حروف: ', bold: true, color: '475569', font: FONT_NAME, rightToLeft: true }),
+                            new TextRun({
+                              text: amountToWordsWithCurrency(totals.grandTotal, currencyName),
+                              bold: true,
+                              color: '1E3A8A',
+                              font: FONT_NAME,
+                              rightToLeft: true,
+                            }),
+                          ],
+                        }),
+                      ],
+                    }),
+
+                    // Left: Totals Calculation
+                    new TableCell({
+                      width: { size: 45, type: WidthType.PERCENTAGE },
+                      borders: cellBorders,
+                      children: [
+                        new Paragraph({
+                          bidirectional: true,
+                          alignment: AlignmentType.RIGHT,
+                          children: [
+                            new TextRun({ text: 'جمع کل اقلام: ', font: FONT_NAME, rightToLeft: true }),
+                            new TextRun({ text: `${formatAmount(totals.subtotal, isPersianDigits)} ${currencyName}`, bold: true, font: FONT_NAME, rightToLeft: true }),
+                          ],
+                        }),
+                        ...(invoice.discountEnabled
+                          ? [
+                              new Paragraph({
+                                bidirectional: true,
+                                alignment: AlignmentType.RIGHT,
+                                children: [
+                                  new TextRun({ text: 'مجموع تخفیف: ', color: 'DC2626', font: FONT_NAME, rightToLeft: true }),
+                                  new TextRun({ text: `- ${formatAmount(totals.totalDiscount, isPersianDigits)} ${currencyName}`, bold: true, color: 'DC2626', font: FONT_NAME, rightToLeft: true }),
+                                ],
+                              }),
+                            ]
+                          : []),
+                        ...(invoice.taxEnabled
+                          ? [
+                              new Paragraph({
+                                bidirectional: true,
+                                alignment: AlignmentType.RIGHT,
+                                children: [
+                                  new TextRun({ text: 'مالیات و عوارض: ', font: FONT_NAME, rightToLeft: true }),
+                                  new TextRun({ text: `${formatAmount(totals.totalTax, isPersianDigits)} ${currencyName}`, bold: true, font: FONT_NAME, rightToLeft: true }),
+                                ],
+                              }),
+                            ]
+                          : []),
+                        new Paragraph({
+                          bidirectional: true,
+                          alignment: AlignmentType.RIGHT,
+                          spacing: { before: 80 },
+                          children: [
+                            new TextRun({ text: 'مبلغ نهایی قابل پرداخت: ', bold: true, color: '1E3A8A', size: 24, font: FONT_NAME, rightToLeft: true }),
+                            new TextRun({ text: `${formatAmount(totals.grandTotal, isPersianDigits)} ${currencyName}`, bold: true, color: '1E3A8A', size: 24, font: FONT_NAME, rightToLeft: true }),
+                          ],
+                        }),
+                      ],
+                    }),
+                  ],
+                }),
               ],
             }),
 
-            // Payment & Multiple Bank Accounts
+            // Bank Accounts Section
             ...(bankAccounts.length > 0
               ? [
-                  new Paragraph({
-                    children: [new TextRun({ text: 'اطلاعات حساب‌های بانکی و واریز وجه:', bold: true })],
-                    alignment: AlignmentType.RIGHT,
-                    bidirectional: true,
-                    spacing: { before: 200, after: 100 },
-                  }),
-                  ...bankAccounts.map(
-                    (acc) =>
-                      new Paragraph({
-                        bidirectional: true,
-                        alignment: AlignmentType.RIGHT,
+                  new Paragraph({ text: '', spacing: { before: 120 } }),
+                  new Table({
+                    width: { size: 100, type: WidthType.PERCENTAGE },
+                    visuallyRightToLeft: true,
+                    layout: TableLayoutType.FIXED,
+                    margins: cellMargins,
+                    borders: {
+                      top: lightBorder,
+                      bottom: lightBorder,
+                      left: lightBorder,
+                      right: lightBorder,
+                      insideHorizontal: lightBorder,
+                      insideVertical: lightBorder,
+                    },
+                    rows: [
+                      new TableRow({
                         children: [
-                          new TextRun({
-                            text: `${acc.bankName ? 'بانک ' + acc.bankName + ' | ' : ''}${acc.accountHolder ? 'به نام: ' + acc.accountHolder + ' | ' : ''}${acc.cardNumber ? 'شماره کارت: ' + acc.cardNumber + ' | ' : ''}${acc.accountNumber ? 'شماره حساب: ' + acc.accountNumber + ' | ' : ''}${acc.iban ? 'شماره شبا: ' + acc.iban : ''}`,
+                          new TableCell({
+                            shading: { fill: 'F8FAFC' },
+                            borders: cellBorders,
+                            children: [
+                              new Paragraph({
+                                bidirectional: true,
+                                alignment: AlignmentType.RIGHT,
+                                children: [new TextRun({ text: 'اطلاعات حساب‌های بانکی و واریز وجه:', bold: true, color: '1E3A8A', font: FONT_NAME, rightToLeft: true })],
+                              }),
+                              ...bankAccounts.map(
+                                (acc) =>
+                                  new Paragraph({
+                                    bidirectional: true,
+                                    alignment: AlignmentType.RIGHT,
+                                    spacing: { before: 40, after: 40 },
+                                    children: [
+                                      new TextRun({ text: `• ${acc.bankName ? 'بانک ' + acc.bankName + ' | ' : ''}`, bold: true, font: FONT_NAME, rightToLeft: true }),
+                                      new TextRun({ text: `${acc.accountHolder ? 'به نام: ' + acc.accountHolder + ' | ' : ''}`, font: FONT_NAME, rightToLeft: true }),
+                                      new TextRun({ text: `${acc.cardNumber ? 'شماره کارت: ' + acc.cardNumber + ' | ' : ''}`, font: FONT_NAME, rightToLeft: true }),
+                                      new TextRun({ text: `${acc.accountNumber ? 'شماره حساب: ' + acc.accountNumber + ' | ' : ''}`, font: FONT_NAME, rightToLeft: true }),
+                                      new TextRun({ text: `${acc.iban ? 'شماره شبا: ' + acc.iban : ''}`, font: FONT_NAME, rightToLeft: true }),
+                                    ],
+                                  })
+                              ),
+                            ],
                           }),
                         ],
-                      })
-                  ),
+                      }),
+                    ],
+                  }),
                 ]
               : []),
 
+            // Payment Terms & Notes
             ...(invoice.payment.terms || invoice.payment.notes
               ? [
-                  new Paragraph({
-                    children: [new TextRun({ text: 'توضیحات و شرایط:', bold: true })],
-                    alignment: AlignmentType.RIGHT,
-                    bidirectional: true,
-                    spacing: { before: 150, after: 100 },
-                  }),
-                  new Paragraph({
-                    bidirectional: true,
-                    alignment: AlignmentType.RIGHT,
-                    text: `${invoice.payment.terms || ''} ${invoice.payment.notes || ''}`.trim(),
+                  new Paragraph({ text: '', spacing: { before: 100 } }),
+                  new Table({
+                    width: { size: 100, type: WidthType.PERCENTAGE },
+                    visuallyRightToLeft: true,
+                    layout: TableLayoutType.FIXED,
+                    margins: cellMargins,
+                    borders: {
+                      top: lightBorder,
+                      bottom: lightBorder,
+                      left: lightBorder,
+                      right: lightBorder,
+                    },
+                    rows: [
+                      new TableRow({
+                        children: [
+                          new TableCell({
+                            borders: cellBorders,
+                            children: [
+                              new Paragraph({
+                                bidirectional: true,
+                                alignment: AlignmentType.RIGHT,
+                                children: [new TextRun({ text: 'شرایط و توضیحات فاکتور:', bold: true, color: '475569', font: FONT_NAME, rightToLeft: true })],
+                              }),
+                              new Paragraph({
+                                bidirectional: true,
+                                alignment: AlignmentType.RIGHT,
+                                children: [
+                                  new TextRun({
+                                    text: `${invoice.payment.terms || ''} ${invoice.payment.notes || ''}`.trim(),
+                                    font: FONT_NAME,
+                                    rightToLeft: true,
+                                  }),
+                                ],
+                              }),
+                            ],
+                          }),
+                        ],
+                      }),
+                    ],
                   }),
                 ]
               : []),
 
-            // Signatures row if enabled
+            // Signatures Table
             ...(invoice.showSellerSignature || invoice.showBuyerSignature
               ? [
                   new Paragraph({ text: '', spacing: { before: 200 } }),
                   new Table({
                     width: { size: 100, type: WidthType.PERCENTAGE },
+                    visuallyRightToLeft: true,
+                    layout: TableLayoutType.FIXED,
+                    margins: { top: 200, bottom: 200, left: 140, right: 140 },
+                    borders: {
+                      top: dashedBorder,
+                      bottom: dashedBorder,
+                      left: dashedBorder,
+                      right: dashedBorder,
+                      insideHorizontal: dashedBorder,
+                      insideVertical: dashedBorder,
+                    },
                     rows: [
                       new TableRow({
                         children: [
                           new TableCell({
+                            width: { size: 50, type: WidthType.PERCENTAGE },
+                            borders: { top: dashedBorder, bottom: dashedBorder, left: dashedBorder, right: dashedBorder },
                             children: [
                               new Paragraph({
                                 bidirectional: true,
                                 alignment: AlignmentType.CENTER,
                                 children: [
                                   new TextRun({
-                                    text: invoice.showSellerSignature ? 'مهر و امضای فروشنده' : '',
+                                    text: invoice.showSellerSignature ? 'مهر و امضای فروشنده (صادرکننده)' : '',
+                                    bold: true,
+                                    color: '64748B',
+                                    font: FONT_NAME,
+                                    rightToLeft: true,
                                   }),
                                 ],
                               }),
+                              new Paragraph({ text: '', spacing: { before: 300 } }),
                             ],
                           }),
                           new TableCell({
+                            width: { size: 50, type: WidthType.PERCENTAGE },
+                            borders: { top: dashedBorder, bottom: dashedBorder, left: dashedBorder, right: dashedBorder },
                             children: [
                               new Paragraph({
                                 bidirectional: true,
@@ -479,9 +915,14 @@ export async function exportToWord(invoice: Invoice, fileName: string): Promise<
                                 children: [
                                   new TextRun({
                                     text: invoice.showBuyerSignature ? 'امضا و تأیید خریدار' : '',
+                                    bold: true,
+                                    color: '64748B',
+                                    font: FONT_NAME,
+                                    rightToLeft: true,
                                   }),
                                 ],
                               }),
+                              new Paragraph({ text: '', spacing: { before: 300 } }),
                             ],
                           }),
                         ],
@@ -502,13 +943,30 @@ export async function exportToWord(invoice: Invoice, fileName: string): Promise<
                     heading: HeadingLevel.HEADING_2,
                     alignment: AlignmentType.CENTER,
                     bidirectional: true,
-                    spacing: { after: 150 },
+                    spacing: { before: 100, after: 150 },
+                    children: [
+                      new TextRun({
+                        text: invoice.secondPageTitle || 'پیوست / شرایط و توضیحات تکمیلی',
+                        bold: true,
+                        size: 28,
+                        color: '1E3A8A',
+                        font: FONT_NAME,
+                        rightToLeft: true,
+                      }),
+                    ],
                   }),
                   new Paragraph({
-                    text: `پیوست فاکتور شماره ${invoice.invoiceNumber} | تاریخ: ${invoice.issueDate}`,
                     alignment: AlignmentType.CENTER,
                     bidirectional: true,
                     spacing: { after: 200 },
+                    children: [
+                      new TextRun({
+                        text: `پیوست فاکتور شماره ${invoice.invoiceNumber} | تاریخ: ${invoice.issueDate}`,
+                        color: '64748B',
+                        font: FONT_NAME,
+                        rightToLeft: true,
+                      }),
+                    ],
                   }),
                   ...(invoice.secondPageContent || '')
                     .split('\n')
@@ -516,10 +974,16 @@ export async function exportToWord(invoice: Invoice, fileName: string): Promise<
                     .map(
                       (line) =>
                         new Paragraph({
-                          text: line,
                           alignment: AlignmentType.RIGHT,
                           bidirectional: true,
-                          spacing: { after: 120 },
+                          spacing: { after: 100 },
+                          children: [
+                            new TextRun({
+                              text: line,
+                              font: FONT_NAME,
+                              rightToLeft: true,
+                            }),
+                          ],
                         })
                     ),
                   ...(invoice.secondPageSignatures && (invoice.showSellerSignature || invoice.showBuyerSignature)
@@ -527,10 +991,22 @@ export async function exportToWord(invoice: Invoice, fileName: string): Promise<
                         new Paragraph({ text: '', spacing: { before: 300 } }),
                         new Table({
                           width: { size: 100, type: WidthType.PERCENTAGE },
+                          visuallyRightToLeft: true,
+                          layout: TableLayoutType.FIXED,
+                          margins: { top: 200, bottom: 200, left: 140, right: 140 },
+                          borders: {
+                            top: dashedBorder,
+                            bottom: dashedBorder,
+                            left: dashedBorder,
+                            right: dashedBorder,
+                            insideHorizontal: dashedBorder,
+                            insideVertical: dashedBorder,
+                          },
                           rows: [
                             new TableRow({
                               children: [
                                 new TableCell({
+                                  borders: { top: dashedBorder, bottom: dashedBorder, left: dashedBorder, right: dashedBorder },
                                   children: [
                                     new Paragraph({
                                       bidirectional: true,
@@ -538,12 +1014,18 @@ export async function exportToWord(invoice: Invoice, fileName: string): Promise<
                                       children: [
                                         new TextRun({
                                           text: invoice.showSellerSignature ? 'مهر و امضای فروشنده' : '',
+                                          bold: true,
+                                          color: '64748B',
+                                          font: FONT_NAME,
+                                          rightToLeft: true,
                                         }),
                                       ],
                                     }),
+                                    new Paragraph({ text: '', spacing: { before: 300 } }),
                                   ],
                                 }),
                                 new TableCell({
+                                  borders: { top: dashedBorder, bottom: dashedBorder, left: dashedBorder, right: dashedBorder },
                                   children: [
                                     new Paragraph({
                                       bidirectional: true,
@@ -551,9 +1033,14 @@ export async function exportToWord(invoice: Invoice, fileName: string): Promise<
                                       children: [
                                         new TextRun({
                                           text: invoice.showBuyerSignature ? 'امضا و تأیید خریدار' : '',
+                                          bold: true,
+                                          color: '64748B',
+                                          font: FONT_NAME,
+                                          rightToLeft: true,
                                         }),
                                       ],
                                     }),
+                                    new Paragraph({ text: '', spacing: { before: 300 } }),
                                   ],
                                 }),
                               ],
@@ -613,6 +1100,8 @@ export function validateAndParseInvoiceJSON(jsonText: string): { success: boolea
     data.showStatusBadge = data.showStatusBadge ?? true;
     data.showSellerSignature = data.showSellerSignature ?? true;
     data.showBuyerSignature = data.showBuyerSignature ?? true;
+    data.taxType = data.taxType || 'overall';
+    data.overallTaxRate = data.overallTaxRate ?? data.defaultTaxRate ?? 10;
     data.enableSecondPage = data.enableSecondPage ?? false;
     data.secondPageTitle = data.secondPageTitle || 'پیوست / شرایط و توضیحات تکمیلی قرارداد';
     data.secondPageContent = data.secondPageContent || '';

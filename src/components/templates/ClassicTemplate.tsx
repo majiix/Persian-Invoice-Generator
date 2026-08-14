@@ -121,13 +121,19 @@ export const ClassicTemplate: React.FC<TemplateProps> = ({ invoice }) => {
             <th style={{ width: '10%' }}>تعداد/مقدار</th>
             <th style={{ width: '15%' }}>مبلغ واحد ({currencyName})</th>
             {invoice.discountEnabled && <th style={{ width: '10%' }}>تخفیف</th>}
-            {invoice.taxEnabled && <th style={{ width: '10%' }}>مالیات</th>}
+            {invoice.taxEnabled && invoice.taxType === 'per_item' && (
+              <th style={{ width: '10%' }}>مالیات</th>
+            )}
             <th style={{ width: '16%' }}>مبلغ کل ({currencyName})</th>
           </tr>
         </thead>
         <tbody>
           {invoice.items.map((item, index) => {
-            const itemCalc = calculateLineItemTotal(item);
+            const itemCalc = calculateLineItemTotal(item, {
+              discountEnabled: invoice.discountEnabled,
+              taxEnabled: invoice.taxEnabled,
+              taxType: invoice.taxType,
+            });
             return (
               <tr key={item.id}>
                 <td style={{ textAlign: 'center' }}>{formatAmount(index + 1, isPersianDigits)}</td>
@@ -148,7 +154,7 @@ export const ClassicTemplate: React.FC<TemplateProps> = ({ invoice }) => {
                     {formatAmount(itemCalc.discountAmount, isPersianDigits)}
                   </td>
                 )}
-                {invoice.taxEnabled && (
+                {invoice.taxEnabled && invoice.taxType === 'per_item' && (
                   <td style={{ textAlign: 'center' }}>
                     {formatAmount(itemCalc.taxAmount, isPersianDigits)}
                   </td>

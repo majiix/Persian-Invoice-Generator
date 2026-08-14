@@ -3,6 +3,7 @@ export type DigitType = 'persian' | 'english';
 export type CalendarType = 'jalali' | 'gregorian';
 export type InvoiceStatus = 'draft' | 'paid' | 'unpaid' | 'overdue';
 export type TemplateId = 'classic' | 'modern' | 'minimal';
+export type TaxType = 'overall' | 'per_item';
 
 export interface BusinessInfo {
   name: string;
@@ -68,6 +69,7 @@ export interface PaymentInfo {
 export interface InvoiceCalculations {
   subtotal: number;
   totalDiscount: number;
+  taxableAmount: number;
   totalTax: number;
   grandTotal: number;
 }
@@ -85,6 +87,8 @@ export interface Invoice {
   calendarType: CalendarType;
   templateId: TemplateId;
   taxEnabled: boolean;
+  taxType: TaxType; // 'overall' | 'per_item'
+  overallTaxRate: number; // e.g. 10%
   discountEnabled: boolean;
   defaultTaxRate: number;
   

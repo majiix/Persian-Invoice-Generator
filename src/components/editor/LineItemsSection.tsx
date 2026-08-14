@@ -118,14 +118,20 @@ export const LineItemsSection: React.FC<Props> = ({ invoice, onChangeItems, onSh
               <th style={{ width: '110px', minWidth: '110px' }}>واحد</th>
               <th style={{ width: '140px', minWidth: '130px' }}>قیمت واحد ({currencyLabel})</th>
               {invoice.discountEnabled && <th style={{ width: '110px', minWidth: '105px' }}>تخفیف</th>}
-              {invoice.taxEnabled && <th style={{ width: '85px', minWidth: '80px', textAlign: 'center' }}>مالیات (%)</th>}
+              {invoice.taxEnabled && invoice.taxType === 'per_item' && (
+                <th style={{ width: '85px', minWidth: '80px', textAlign: 'center' }}>مالیات (%)</th>
+              )}
               <th style={{ width: '130px', minWidth: '120px', textAlign: 'center' }}>مبلغ کل</th>
               <th style={{ width: '75px', textAlign: 'center' }}>عملیات</th>
             </tr>
           </thead>
           <tbody>
             {invoice.items.map((item, index) => {
-              const itemCalc = calculateLineItemTotal(item);
+              const itemCalc = calculateLineItemTotal(item, {
+                discountEnabled: invoice.discountEnabled,
+                taxEnabled: invoice.taxEnabled,
+                taxType: invoice.taxType,
+              });
               return (
                 <tr key={item.id}>
                   {/* Row Number */}
@@ -261,8 +267,8 @@ export const LineItemsSection: React.FC<Props> = ({ invoice, onChangeItems, onSh
                     </td>
                   )}
 
-                  {/* Tax */}
-                  {invoice.taxEnabled && (
+                  {/* Tax (Only if per_item mode) */}
+                  {invoice.taxEnabled && invoice.taxType === 'per_item' && (
                     <td>
                       <input
                         type="number"

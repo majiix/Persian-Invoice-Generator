@@ -214,12 +214,15 @@ export const InvoiceMetaSection: React.FC<Props> = ({ invoice, onChange }) => {
 
         <div className="form-group" style={{ justifyContent: 'center' }}>
           <label className="form-label">تنظیمات مالیات و تخفیف</label>
-          <div style={{ display: 'flex', gap: '16px', marginTop: '6px' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', marginTop: '6px' }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', cursor: 'pointer' }}>
               <input
                 type="checkbox"
                 checked={invoice.taxEnabled}
-                onChange={(e) => onChange({ taxEnabled: e.target.checked })}
+                onChange={(e) => {
+                  const isChecked = e.target.checked;
+                  onChange({ taxEnabled: isChecked });
+                }}
               />
               <span>محاسبه مالیات ارزش افزوده</span>
             </label>
@@ -227,13 +230,81 @@ export const InvoiceMetaSection: React.FC<Props> = ({ invoice, onChange }) => {
               <input
                 type="checkbox"
                 checked={invoice.discountEnabled}
-                onChange={(e) => onChange({ discountEnabled: e.target.checked })}
+                onChange={(e) => {
+                  const isChecked = e.target.checked;
+                  const updatedItems = isChecked
+                    ? invoice.items
+                    : invoice.items.map((item) => ({ ...item, discount: 0 }));
+                  onChange({ discountEnabled: isChecked, items: updatedItems });
+                }}
               />
               <span>ستون تخفیف</span>
             </label>
           </div>
         </div>
       </div>
+
+      {/* Extended Tax Settings (when Tax is enabled) */}
+      {invoice.taxEnabled && (
+        <div
+          style={{
+            marginTop: '12px',
+            padding: '12px 14px',
+            backgroundColor: 'var(--bg-surface-subtle)',
+            borderRadius: 'var(--radius-md)',
+            border: '1px solid var(--border-color)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '12px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)' }}>
+              روش محاسبه مالیات:
+            </span>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', cursor: 'pointer' }}>
+              <input
+                type="radio"
+                name="taxType"
+                value="overall"
+                checked={(invoice.taxType || 'overall') === 'overall'}
+                onChange={() => onChange({ taxType: 'overall' })}
+              />
+              <span>یکجا روی کل فاکتور (پیش‌فرض)</span>
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', cursor: 'pointer' }}>
+              <input
+                type="radio"
+                name="taxType"
+                value="per_item"
+                checked={invoice.taxType === 'per_item'}
+                onChange={() => onChange({ taxType: 'per_item' })}
+              />
+              <span>مجزا برای هر ردیف کالا</span>
+            </label>
+          </div>
+
+          {(invoice.taxType || 'overall') === 'overall' && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                درصد مالیات کل (%):
+              </label>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                step="any"
+                className="form-input"
+                value={invoice.overallTaxRate ?? 10}
+                onChange={(e) => onChange({ overallTaxRate: parseFloat(e.target.value) || 0 })}
+                style={{ width: '70px', textAlign: 'center', height: '34px', minHeight: '34px' }}
+              />
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
