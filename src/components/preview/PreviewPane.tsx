@@ -203,12 +203,8 @@ export const PreviewPane: React.FC<Props> = ({
               <TemplateRenderer invoice={invoice} />
             </div>
 
-            {/* Page 2: Comments / Attachment Sheet */}
-            {invoice.enableSecondPage && (
-              <div className="invoice-page-sheet">
-                <SecondPageSheet invoice={invoice} />
-              </div>
-            )}
+            {/* Page 2+: Comments / Attachment Sheets */}
+            {invoice.enableSecondPage && <SecondPageSheet invoice={invoice} />}
           </div>
         </div>
       </div>
