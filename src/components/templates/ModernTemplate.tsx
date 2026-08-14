@@ -26,8 +26,12 @@ export const ModernTemplate: React.FC<TemplateProps> = ({ invoice }) => {
             </div>
           )}
           <div className="modern-brand-text">
-            <h2>{invoice.business.name}</h2>
-            {invoice.business.subtitle && <p>{invoice.business.subtitle}</p>}
+            <h2>{invoice.title || 'فاکتور فروش کالا و خدمات'}</h2>
+            {invoice.business.subtitle ? (
+              <p>{invoice.business.subtitle}</p>
+            ) : invoice.business.name ? (
+              <p>{invoice.business.name}</p>
+            ) : null}
           </div>
         </div>
 

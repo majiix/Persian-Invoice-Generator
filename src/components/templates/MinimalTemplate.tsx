@@ -19,10 +19,16 @@ export const MinimalTemplate: React.FC<TemplateProps> = ({ invoice }) => {
       {/* Header */}
       <div className="minimal-header">
         <div className="minimal-title">
-          <h2>{invoice.title || 'صورتحساب'}</h2>
-          <div style={{ fontSize: '13px', fontWeight: 600, color: '#374151' }}>
-            {invoice.business.name}
-          </div>
+          <h2>{invoice.title || 'فاکتور فروش کالا و خدمات'}</h2>
+          {invoice.business.subtitle ? (
+            <div style={{ fontSize: '12px', color: '#6b7280' }}>
+              {invoice.business.subtitle}
+            </div>
+          ) : invoice.business.name ? (
+            <div style={{ fontSize: '12px', color: '#6b7280' }}>
+              {invoice.business.name}
+            </div>
+          ) : null}
         </div>
 
         <div className="minimal-invoice-meta">
